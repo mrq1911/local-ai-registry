@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-10-13T21:07:13.727784+00:00",
+  "engine_commit": "d81235049384534c167caea52b85a694f6103d14",
+  "weights_revision": "faa5b025c584459c13febfa5c59883516710ae39",
+  "launch_sha256": "9b1df784146588fa29cd336cb57f7165840e66520b61f1d9aca3092af12e2aa6",
+  "files": {
+    "evidence/benchmark-1.json": "b499a9af165e1ec63bd433a980703c9c58aa36b3533afe4a7500fc82fdccc93b",
+    "evidence/benchmark-2.json": "db44916a46395727bc1e84f8d2099919018ef4a45f4c0410a88f145f34d279f9",
+    "evidence/benchmark-3.json": "87778e1366fe2d8a43b38a69b9b83e5e9ed40fad5780219324fa86d744a4bcd0",
+    "evidence/engine-version.txt": "c9ca0848cd0286b8775ad08871b622bf80d399e65fd3916b259c804b8c3dcec9",
+    "evidence/extra-summary.json": "7733f3cf5253ca7bd4797e0ee8995d911921a2171da6706bbe37340dc6fc11ba",
+    "evidence/extra-tests.log": "d62cd47b0a581898f0f3d8d34c8acc3179ca7b0588c8aa3fca480817b6af1ed6",
+    "evidence/gates-http.jsonl": "0bd2e5307e006f921589e2fe9444725e2fd517d3fcb93cfc35b43f4c49ec3989",
+    "evidence/gates-run.log": "84219e517ee18d6ff57690fe276e1947a67d2952823003784b601727adfbfdde",
+    "evidence/gates-summary.json": "fc3a4bf092617c1ddb0e80b675840235458ab2f18553cc90230f004fe562cf8c",
+    "evidence/gpu.csv": "84b1c60d06c5fd4f8a78dcb5647337a094f5592ddc21be9562f373f442287fdf",
+    "evidence/server.log": "273922a6447591ed3858df9b7e634c4b22a70b0b905a040e4720ce710832ee7a",
+    "evidence/vision.json": "37aba436326514797b931e647bd7e917b6fa21503dd8a1f7cb56057167df2b4c",
+    "extra-tests.py": "f881bf24a9c2e609416c4cd2b35dedaa8fe01d764be1338d5ffa88098612dcaf",
+    "gates-run.py": "5cc3b579daeea27049bced6383343c68cf18cd3aac483c170a2bfb1a009ffe00",
+    "evidence/pi-network-smoke.json": "c233c8d4859decfe14ac542f050f11aabc87092e9699cc209dff87d974617c6b"
+  },
+  "deployment_launch_sha256": "d58206ca95e8242dc01fbb8e8b2ecfe5846b17d43b222c0c65a5001245a1baab",
+  "note": "full gates used loopback binding; network binding change verified by health check and pi completion"
+}
