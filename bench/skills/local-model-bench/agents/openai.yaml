@@ -1,0 +1,4 @@
+interface:
+  display_name: "local model benchmarks"
+  short_description: "compare local models with private evals"
+  default_prompt: "use $local-model-bench to compare my model servers for reasoning, coding, and agent skills while keeping all evaluation data on my own machines."

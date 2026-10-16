@@ -13,6 +13,7 @@ registry/                      the source of truth, tiny
                                       one recipe (~400 bytes): weights, engine, settings, proof
   models.json                         each model: family, release date, what it is for
 lab/            run, check and publish recipes (lab.py try | convert | render | check); digest.py: the Monday report
+bench/          local model capability comparisons: reasoning, instructions, tools, coding and agents
 dist/           catalog.json: everything above, rendered, at most 3 picks per GPU setup
 site/           local.sybilsolutions.ai and its API (static, on Cloudflare Pages)
 sdk/            js/ and python/: pick a recipe for a GPU, print the command
@@ -103,6 +104,10 @@ Every program runs one the same way:
 2. Write the config file.
 3. Start the image on a bridge network with the card passed through (`--gpus` on NVIDIA, the render node on AMD and Intel).
 4. Put the [gateway](https://github.com/sybil-solutions/local-ai-images) in front, which serves the OpenAI, Anthropic and Responses APIs.
+
+For repeatable capability comparisons against your own model servers, see
+[the local benchmark suite](bench/README.md). Scores, timings and transcripts stay
+on the benchmark computer; models can run on different machines.
 
 ## Browsing models and hardware
 

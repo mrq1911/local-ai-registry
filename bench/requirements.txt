@@ -1,0 +1,5 @@
+inspect-ai==0.3.281
+inspect-evals[bfcl,ifeval]==0.24.0
+instruction-following-eval @ https://github.com/josejg/instruction_following_eval/archive/0c495b2f95155e8b10acb919ae283bfb4d5be6e2.tar.gz
+inspect-harbor==1.0.0
+openai==3.31.0
