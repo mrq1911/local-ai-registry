@@ -1,0 +1,69 @@
+{
+ "recipe": {
+  "model": "welp-35b-a3b",
+  "weights": "quaedra/Welp-35B-A3B-GGUF@3e4a3adbda8df07d2889978170d9955c2e59fb7a",
+  "engine": "llama.cpp-welp-35b-a3b-autofit-256k-rtx-5060-ti-16gb@52192a23c7b2",
+  "set": {},
+  "card": "rtx-5060-ti-16gb"
+ },
+ "where": {
+  "on": "owner",
+  "gpu": "RTX 5060 Ti"
+ },
+ "passed": true,
+ "proof": {
+  "at": "2026-10-13",
+  "on": "owner",
+  "gpu": "RTX 5060 Ti",
+  "launch_sha256": "8c00a5484d221ba15830ac9d24bb1780b1526275c9551a4873ff9ec76faf96aa",
+  "gates": "load chat reasoning tools context speed",
+  "tps": 61.2,
+  "prefill": 751,
+  "served": "/models/Welp-35B-A3B.gguf"
+ },
+ "evidence": {
+  "ok": {
+   "load": true,
+   "chat": true,
+   "reasoning": true,
+   "tools": true,
+   "context": true,
+   "speed": true
+  },
+  "chat": {
+   "content": "Red, Yellow, Blue",
+   "finish": "stop"
+  },
+  "reasoning": {
+   "thinking_chars": 454,
+   "content": "391"
+  },
+  "tools": {
+   "call": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "arguments": "{\"city\":\"Paris\"}"
+     },
+     "id": "PAXrHXKIqmTxUwpgwyoSoTuxfyMOK4Vd"
+    }
+   ],
+   "reply": "The current weather in Paris is overcast with a temperature of 17°C.",
+   "finish": "stop",
+   "calls_again": 0,
+   "thinking_chars": 167
+  },
+  "context": {
+   "prompt_tokens": 213570,
+   "seconds": 284.3,
+   "content": "58213"
+  },
+  "speed": {
+   "window_s": 30,
+   "tokens_total": 3392,
+   "seconds_total": 56.0
+  }
+ },
+ "launch_config_sha256": null
+}

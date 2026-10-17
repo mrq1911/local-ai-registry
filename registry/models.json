@@ -721,6 +721,17 @@
       "aa": {
         "of": "glm-5.3"
       }
+    },
+    "bonsai-2-9b": {
+      "family": "qwen",
+      "name": "Bonsai 2 9B",
+      "released": "2026-09-23",
+      "reasoning": true,
+      "vision": true,
+      "about": "Prism ML's ternary Bonsai 2 9B, based on Qwen3.5-9B, with thinking and tool calling. The Q2_0 packing requires upstream llama.cpp with Bonsai Hadamard support.",
+      "good_for": "Compact local chat and agent work on consumer GPUs",
+      "logo": "qwen",
+      "hf": "prism-ml/Ternary-Bonsai-2-9B-gguf"
     }
   },
   "builds": {
@@ -1055,17 +1066,9 @@
       "format": "ModelOpt · NVFP4",
       "size_gb": 182
     },
-    "Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw@25a44fdbf16862a46b7cc9921142c6c81350af2f": {
-      "format": "EXL3 TR3 · 4 bpw",
-      "size_gb": 175.64
-    },
     "deepseek-ai/DeepSeek-V4-Flash-0731@7872f01b1d1fe23eabc4c98b48bffcef5a386062": {
       "format": "safetensors · FP8",
       "size_gb": 166.887
-    },
-    "Mia-AiLab/Qwen3.8-Flash-Next-NVFP4@925d7be6c14c6c9442ef83e8f05b5a3c39304f69": {
-      "format": "NVFP4",
-      "size_gb": 105.88
     },
     "LibertAIDAI/GLM-5.3-Flash-NVFP4@caca4e6a4ebbd66f159d3d2fc256683fd6e27177": {
       "format": "NVFP4",
@@ -1074,10 +1077,6 @@
     "Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw@64ba41b6c916a587db06eae2e19b7845f7be6e6b": {
       "format": "EXL3 · 2.9 bpw",
       "size_gb": 210.6
-    },
-    "canada-quant/GLM-5.3-Flash-W4A16-MTP@8f425cd3a2ad57233862029b77b05966327ad1a1": {
-      "format": "W4A16 · INT4 GPTQ + MTP",
-      "size_gb": 190.85627058
     },
     "Youssofal/Qwen3.8-27B-MTPLX-Bare-Speed@b59d7002368575f08a58ba0d26686b53a9c162d6": {
       "format": "MLX · 4-bit, native MTP",
@@ -1162,6 +1161,10 @@
     "carloslfu/Qwen3.8-Flash-Next-MLX-4bit@e9d552f83de4665d243d5c9cf73201a1ca6c16d7": {
       "format": "MLX · 4-bit (g64), native MTP",
       "size_gb": 105.3
+    },
+    "prism-ml/Ternary-Bonsai-2-9B-gguf@5b2abb02362efbed46bbe204014b02837778b2c2": {
+      "format": "GGUF · Q2_0",
+      "size_gb": 2.556640128
     }
   }
 }

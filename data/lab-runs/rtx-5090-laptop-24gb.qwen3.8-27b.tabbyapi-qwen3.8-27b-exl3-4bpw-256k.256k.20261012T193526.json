@@ -1,0 +1,70 @@
+{
+ "recipe": {
+  "model": "qwen3.8-27b",
+  "weights": "turboderp/Qwen3.8-27B-exl3@4acd9ad5af224ec9e8815a54d71a033f378a7e9d",
+  "engine": "tabbyapi-qwen3.8-27b-exl3-4bpw-256k@0f83e6198dc3",
+  "set": {},
+  "card": "rtx-5090-laptop-24gb"
+ },
+ "where": {
+  "on": "owner",
+  "gpu": "NVIDIA GeForce RTX 5090 Laptop GPU"
+ },
+ "passed": true,
+ "proof": {
+  "at": "2026-10-12",
+  "on": "owner",
+  "gpu": "NVIDIA GeForce RTX 5090 Laptop GPU",
+  "launch_sha256": "052cdb05d39cc5a0593c55120291b38339b564c249990172fbde5e875bd6a3db",
+  "gates": "load chat reasoning tools context speed",
+  "tps": 65.3,
+  "prefill": 491,
+  "served": "Qwen3.8-27B-EXL3-SC4bpw-H5"
+ },
+ "evidence": {
+  "ok": {
+   "load": true,
+   "chat": true,
+   "reasoning": true,
+   "tools": true,
+   "context": true,
+   "speed": true
+  },
+  "chat": {
+   "content": "\n\nred, blue, yellow",
+   "finish": "stop"
+  },
+  "reasoning": {
+   "thinking_chars": 130,
+   "content": "\n\n391"
+  },
+  "tools": {
+   "call": [
+    {
+     "id": "call_2640d838f40a415ca8413808",
+     "function": {
+      "name": "get_weather",
+      "arguments": "{\"city\": \"Paris\"}"
+     },
+     "type": "function",
+     "index": 0
+    }
+   ],
+   "reply": "\n\nIt's currently 17°C in Paris, with overcast skies.",
+   "finish": "stop",
+   "calls_again": 0,
+   "thinking_chars": 238
+  },
+  "context": {
+   "prompt_tokens": 213561,
+   "seconds": 434.9,
+   "content": "\n\n58213"
+  },
+  "speed": {
+   "window_s": 30,
+   "tokens_total": 7691,
+   "seconds_total": 101.1
+  }
+ },
+ "launch_config_sha256": "2e9593311f004f2cc2a4e49eb3cd9469ff1b410ff2dc2fd1768ee4556dca6c75"
+}

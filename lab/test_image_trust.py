@@ -66,6 +66,17 @@ class ImageTrustTest(unittest.TestCase):
             self.assertFalse(identity.search(base + "other.yml@refs/heads/main"))
             self.assertFalse(identity.search("https://github.com/sybil-solutions/exl3xpu/.github/workflows/release-image.yml@refs/heads/main"))
 
+    def test_org_gateway_also_accepts_the_multiarch_index_workflow(self):
+        _, identity = self.identity("ghcr.io/sybil-solutions/gateway@sha256:" + "a" * 64)
+        base = "https://github.com/sybil-solutions/local-ai-images/.github/workflows/"
+        for workflow in ("release-image.yml", "multiarch-index.yml"):
+            self.assertTrue(identity.search(base + workflow + "@refs/heads/main"), workflow)
+            self.assertFalse(identity.search(base + workflow + "@refs/heads/feature"), workflow)
+        self.assertFalse(identity.search(base + "multiarch-index.yml.evil@refs/heads/main"))
+        for name in ("glm53-flash-offload", "sglang-exl3"):
+            _, other = self.identity(f"ghcr.io/sybil-solutions/{name}@sha256:" + "a" * 64)
+            self.assertFalse(other.search(base + "multiarch-index.yml@refs/heads/main"), name)
+
     def test_legacy_proof_comes_from_oci_after_repository_transfer(self):
         for namespace, expected in (("0xsero", True), ("sybil-solutions", False)):
             run = Mock()
@@ -79,6 +90,20 @@ class ImageTrustTest(unittest.TestCase):
             self.assertTrue(identity.search(base + ref), ref)
         for ref in ["refs/heads/main", "refs/heads/feature", "refs/tags/b11146-evil", "refs/tags/v1", "refs/heads/master/x"]:
             self.assertFalse(identity.search(base + ref), ref)
+
+    def test_official_vllm_rocm_is_approved_by_image_name(self):
+        # images() strips the tag before verify(). A tag left on is not its own approval.
+        run = Mock(side_effect=AssertionError("network accessed"))
+        verify("vllm/vllm-openai-rocm@sha256:" + "a" * 64, run)
+        run.assert_not_called()
+        for image in (
+            "vllm/vllm-openai-rocm:v0.31.0@sha256:" + "a" * 64,
+            "vllm/vllm-openai-rocm:v0.31.0-base@sha256:" + "a" * 64,
+            "vllm/vllm-openai-rocm:latest",
+            "vllm/vllm-openai-rocm:latest-base",
+        ):
+            with self.subTest(image=image), self.assertRaises(ValueError):
+                verify(image, run)
 
     def test_unapproved_or_mutable_images_fail_before_network(self):
         for image in ["ghcr.io/0xsero/gateway:latest", "evil/gateway@sha256:" + "a" * 64]:

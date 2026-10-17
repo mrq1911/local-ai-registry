@@ -2,7 +2,7 @@
   "id": "llamacpp-muse-glimmer-30b-ud-q4-k-xl-dflash-262k-rtx-3090-24gb",
   "kind": "host",
   "engine": "llama.cpp",
-  "about": "single RTX 3090: UD-Q4_K_XL, DFlash draft 15, kquant projector, F16 KV, configured context 262144; local acceptance passed with a 175483-token retrieval prompt and a synthetic vision test.",
+  "about": "single RTX 3090: UD-Q4_K_XL, DFlash draft 15, kquant projector, F16 KV, configured context 262144; official lab.py try acceptance passed.",
   "command": [
     "llama-b11429/llama-server",
     "--model",
@@ -45,12 +45,14 @@
     "--host",
     "0.0.0.0",
     "--port",
-    "8080"
+    "30000",
+    "--alias",
+    "muse-glimmer-30b"
   ],
   "env": {
     "LD_LIBRARY_PATH": "cudart-llama-b11429-bin-ubuntu-cuda-12.8-x64"
   },
-  "port": 8080,
+  "port": 30000,
   "ctx": 262144,
   "seqs": 1,
   "vision": true,
@@ -99,9 +101,9 @@
     "engine_commit": "d81235049384534c167caea52b85a694f6103d14",
     "vision": true,
     "tools": true,
-    "reason": "all six current lab gates and the separate synthetic vision test passed; candidate retained as requested. retrieval tested at 175483 tokens, not the full configured limit.",
-    "evidence": "lab/runs/muse-glimmer-30b-rtx-3090-20261013/evidence/gates-summary.json",
-    "captured_at": "2026-10-13T21:07:13.727784+00:00"
+    "reason": "all six official lab.py try gates passed on mrq6; retrieval tested at 175483 tokens, not the full configured limit. supplementary synthetic vision evidence retained under data/sources/.",
+    "evidence": "data/lab-runs/rtx-3090-24gb.muse-glimmer-30b.llamacpp-muse-glimmer-30b-ud-q4-k-xl-dflash-262k-rtx-3090-24gb.256k.20261017T002641.json",
+    "captured_at": "2026-10-17T00:26:41Z"
   },
   "setup": "extract the pinned engine archive and CUDA runtime archive into the working directory. CUDA runtime: https://github.com/ggml-org/llama.cpp/releases/download/b11429/cudart-llama-b11429-bin-ubuntu-cuda-12.8-x64.tar.gz#sha256=f4ab593e31507320b121f2cb21791f4c72420a2483d3df8bf2ca1a97d04e6845. download the three pinned weights into ../models. draft 15, no ngram hybrid. tested with llama.cpp b11429 on one RTX 3090. all six lab gates and a synthetic vision test passed; retrieval tested at 175483 tokens. the CUDA runtime archive must also be installed as described above.",
   "install": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-ubuntu-cuda-12.8-x64.tar.gz#sha256=b13c64b9224d3c89d9993945d70cc21177ad00178c21b8d34237e3bc139834f1",

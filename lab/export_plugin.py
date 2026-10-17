@@ -9,11 +9,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lab
 
 ROOT = lab.ROOT
-GATEWAY = "ghcr.io/sybil-solutions/gateway@sha256:9ab834c2bbcb12d63de233e699902c29788afe7f14a44bc186457b8b15bd9bbd"
+GATEWAY = "ghcr.io/sybil-solutions/gateway@sha256:110e8b11dc147e245e7c4cc2b24c85bd77e723f225227e85e4f20cc8fe3b7dce"  # org-v6: one attested index over linux/amd64 + linux/arm64
 MIN_DRIVER = {"tabbyapi": "575.0", "sglang": "580.0", "vllm": "580.0", "llama.cpp": "535.0"}
 # The only container flags a catalog launch may hand the plugin: device nodes a GPU backend
 # already implies. Anything else (host IPC, seccomp, privileges) keeps the recipe out.
 DEVICE_FLAGS = {"--device /dev/kfd", "--device /dev/dri"}
+# Images with no build attestation binding the digest to a source commit (marketplace review, omacom/omarchy-plugin-
+# marketplace#11207). Their recipes stay in the registry with their lab evidence, but the plugin is not handed them
+# until they are rebuilt through an attested workflow and lab-proven again on the new digest.
+NO_PROVENANCE = {
+    "sha256:9d95829ab41a9307e9b25c86e4af1ec52c6a02f7888f0e13a1ce93c0a7ff3814",  # 0xsero/sglang-exl3:v0.7.0-multiarch, built by hand
+    "sha256:cc2bfc369c709c53d239ef2af41d4ae2530904975816bb2ca484188008586ac9",  # 0xsero/qwen38-3090-sglang
+    "sha256:ee978fb3e3d11cf8577a014539a7ad4e2a8dff95163fc5d96c0a06fcf9c64640",  # morrowmake/vllm-cmp170hx
+}
 
 
 def exportable(launch):
@@ -59,7 +67,9 @@ def entry(key, r, meta):
                          "mountPath": L["weights"]["at"].rsplit("/", 1)[0], "dir": name, "files": ""}],
             "asset": {"name": f"{Path(key).name}.config.yml", "mountPath": L["config"]["at"], "text": L["config"]["text"]} if L["config"] else None,
             "scratch": None, "launch": {"entrypoint": L["entrypoint"], "arguments": L["args"], "environment": L["env"], "port": L["port"], "shm": L["shm"]},
-            "serving": {"ctxTokens": L["ctx"], "kvTokens": L["ctx"] * L["seqs"] + 1024 * L["seqs"]}, "capabilities": caps}
+            "serving": {"ctxTokens": L["ctx"], "kvTokens": lab.kv_tokens(r, L)}, "capabilities": caps,
+            # a template profile's host needs (RAM for offloaded experts, NVMe) reach the plugin like a frozen launch's
+            **({"needs": L["needs"]} if L.get("needs") else {})}
 
 
 def derived(key, r, meta, p, L, caps):
@@ -86,7 +96,7 @@ def derived(key, r, meta, p, L, caps):
             "weights": weights,
             "asset": {"name": f"{Path(key).name}.config.yml", "mountPath": L["config"]["at"], "text": L["config"]["text"]} if L["config"] else None,
             "scratch": None, "launch": {"entrypoint": L["entrypoint"], "arguments": args, "environment": L["env"], "port": L["port"], "shm": L["shm"]},
-            "serving": {"ctxTokens": L["ctx"], "kvTokens": L["ctx"] * L["seqs"] + 1024 * L["seqs"]}, "capabilities": caps,
+            "serving": {"ctxTokens": L["ctx"], "kvTokens": lab.kv_tokens(r, L)}, "capabilities": caps,
             **({"needs": L["needs"]} if L.get("needs") else {})}
 
 
@@ -121,7 +131,7 @@ def describable(r):
             and bool(lab.render(r)["weights"]))
 
 
-def eligible(r, version):
+def eligible(r, version, vram_gb=None):  # vram_gb: one card's memory, None reads registry/cards
     L = r["launch"]
     # a recipe its publisher reported (not yet run by the lab) is exported too, flagged `reported`, so the plugin can
     # say so; one withdrawn is not
@@ -129,6 +139,12 @@ def eligible(r, version):
     if any(L.get(x) for x in ("kind", "flags", "machines", "build", "companion")) or r["proof"][0].get("withdrawn"):
         return False
     if not describable(r):
+        return False
+    # the KV floor (lab.KV_FLOOR_TOKENS): on a setup over lab.KV_FLOOR_ABOVE_VRAM_GB, a recipe holding less KV than
+    # that stays in the registry with its evidence but never reaches the plugin
+    if lab.below_kv_floor(r, vram_gb=vram_gb):
+        return False
+    if (lab.render(r).get("image") or "").rpartition("@")[2] in NO_PROVENANCE:
         return False
     if L.get("prepare") or L.get("resources"):
         if version == 2:
@@ -144,6 +160,7 @@ def build(version=2):
     meta = json.loads((ROOT / "registry" / "models.json").read_text())
     hw = {}
     for card, c in sorted(cat["cards"].items()):
+        vram = c.get("vram_gb") or 0  # one card's memory, for the KV floor (times the launch's cards)
         # the plugin runs one plain container per card: no host programs, host IPC or networking, or several machines
         # the picks, then any other recipe that states host `needs`: the plugin offers those only on a machine with
         # that much free RAM and disk (e.g. experts offloaded to system RAM, tables read from NVMe)
@@ -155,11 +172,11 @@ def build(version=2):
         # card once and the list does not repeat a model in a weaker setting
         # then each multi-card setup on one machine, its own picks and models the same way
         multi = [k for st in c.get("setups", []) if st["cards"] > 1 and st["machines"] == 1 for k in st["picks"] + st["more"]]
-        ok = [k for k in c["picks"] if eligible(cat["recipes"][k], version)]
+        ok = [k for k in c["picks"] if eligible(cat["recipes"][k], version, vram)]
         names = {entry(k, cat["recipes"][k], meta)["name"] for k in ok}
         for k in c["more"]:
             r = cat["recipes"][k]
-            if not eligible(r, version):
+            if not eligible(r, version, vram):
                 continue
             name = entry(k, r, meta)["name"]
             if r["launch"].get("needs") or name not in names:
@@ -169,7 +186,7 @@ def build(version=2):
             seen = set()
             for k in multi:
                 r = cat["recipes"][k]
-                if r["launch"].get("cards", 1) != n or k in ok or not eligible(r, version):
+                if r["launch"].get("cards", 1) != n or k in ok or not eligible(r, version, vram):
                     continue
                 name = entry(k, r, meta)["name"]
                 if name not in seen:

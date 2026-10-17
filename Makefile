@@ -8,7 +8,7 @@ all:
 
 check:
 	python3 -m unittest discover -s lab -p test_slotstream.py
-	python3 -m unittest discover -s lab -p test_build_pin.py
+	python3 -m unittest discover -s lab -p test_export_plugin.py
 	python3 lab/lab.py check
 	python3 lab/catalog.py --check
 	python3 lab/hardware.py --check

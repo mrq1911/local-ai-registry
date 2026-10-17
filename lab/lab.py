@@ -34,6 +34,13 @@ LAUNCHES = REG / "launches"  # launches frozen exactly as they were validated, o
 GATES = ["load", "chat", "reasoning", "tools", "context", "speed"]
 MIN_TPS = 15.0
 MAX_RECIPE_BYTES = 1024
+# The KV floor: a setup with more than KV_FLOOR_ABOVE_VRAM_GB of GPU memory (the card's vram_gb x cards x machines)
+# must hold at least KV_FLOOR_TOKENS (128k) of KV cache. `try` refuses a launch below it, `check` fails a new recipe
+# below it, and the plugin export leaves every recipe below it out. Recipes accepted before the floor are listed in
+# registry/KV_FLOOR_EXEMPT: they stay in the registry with their evidence, but never reach the plugin.
+KV_FLOOR_TOKENS = 131072
+KV_FLOOR_ABOVE_VRAM_GB = 8
+KV_FLOOR_EXEMPT = "kv-floor-exempt.json"  # next to recipes/
 
 
 def log(msg):
@@ -96,11 +103,16 @@ def card(card_id):
 
 
 def recipe_path(r, launch):
-    """recipes/<vendor>/<card>/<model>.<engine kind>.<context>k[.<n>x].json, n = every card in the setup"""
+    """recipes/<vendor>/<card>/<model>.<engine kind>.<context>k[.<n>x][.<variant>].json, n = every card in the setup;
+    variant = the launch's optional `variant` (a-z, 0-9, dashes), for several recipes of one model, engine kind and
+    context on one card that differ in what the host needs (e.g. ram28, ram58: experts in RAM vs read from NVMe)"""
     kind = profile(r["engine"]).get("engine", r["engine"].split("@")[0])
     n = launch.get("machines", 1) * launch.get("cards", 1)
     many = f".{n}x" if n > 1 else ""  # several cards, in one computer or across several
-    return RECIPES / card(r["card"])["vendor"] / r["card"] / f"{r['model']}.{kind}.{launch['ctx'] // 1024}k{many}.json"
+    var = launch.get("variant") or ""
+    assert not var or re.fullmatch(r"[a-z0-9][a-z0-9-]{0,23}", var), f"variant {var!r}"
+    var = f".{var}" if var else ""
+    return RECIPES / card(r["card"])["vendor"] / r["card"] / f"{r['model']}.{kind}.{launch['ctx'] // 1024}k{many}{var}.json"
 
 
 def dirname(weights):
@@ -117,7 +129,7 @@ def render(recipe):
             out = {"kind": "host", "command": p["command"], "install": p.get("install"), "port": p["port"], "image": None,
                    "weights": p.get("weights") or [], "config": None, "ctx": p["ctx"], "seqs": p.get("seqs", 1),
                    "vision": p.get("vision", False), "backend": p.get("backend"), "cards": p.get("cards", 1),
-                   "env": p.get("env") or {}, **{k: p[k] for k in ("setup", "source", "needs") if k in p},
+                   "env": p.get("env") or {}, **{k: p[k] for k in ("setup", "source", "needs", "variant") if k in p},
                    **({"machines": p["machines"]} if p.get("machines", 1) != 1 else {})}  # one machine is the default and stays out
             # MLX on Apple silicon: pinned packages, a launcher file, its environment, and a GPU wired-memory limit that
             # follows the card's unified memory
@@ -129,7 +141,7 @@ def render(recipe):
                 out["sysctl"] = {"iogpu.wired_limit_mb": card(recipe["card"])["vram_gb"] * 1024 - p["wired_limit_reserve_mb"]}
             return out
         return {"image": p["image"], "entrypoint": p.get("entrypoint"), "args": p["args"], "port": p["port"], "shm": p.get("shm"),
-                **{k: p[k] for k in ("flags", "machines", "build", "setup", "source", "needs", "prepare", "resources", "companion") if k in p},
+                **{k: p[k] for k in ("flags", "machines", "build", "setup", "source", "needs", "prepare", "resources", "companion", "variant") if k in p},
                 "env": p.get("env") or {}, "weights": p["weights"],
                 "config": {**cfg, "sha256": hashlib.sha256(cfg["text"].encode()).hexdigest()} if cfg else None,
                 "ctx": p["ctx"], "seqs": p.get("seqs", 1), "vision": p.get("vision", False), "backend": p.get("backend"), "cards": p.get("cards", 1)}
@@ -148,7 +160,40 @@ def render(recipe):
             "env": {k: sub(v) for k, v in (p.get("env") or {}).items()},
             "weights": {"repo": repo, "revision": rev, "at": sub(p["weights_at"])},
             "config": {"at": p["config_at"], "text": config, "sha256": hashlib.sha256(config.encode()).hexdigest()} if config else None,
-            "ctx": int(s["ctx"]), "seqs": int(s["seqs"]), "vision": bool(s.get("vision", False)), "backend": p["backend"], "min_cuda": p.get("min_cuda")}
+            "ctx": int(s["ctx"]), "seqs": int(s["seqs"]), "vision": bool(s.get("vision", False)), "backend": p["backend"], "min_cuda": p.get("min_cuda"),
+            # an offload profile states what the host must have, from its settings (experts in RAM, tables on NVMe)
+            **({"needs": {k: (v if not isinstance(v, str) or k == "fast_storage" else float(sub(v)))
+                          for k, v in p["needs"].items()}} if p.get("needs") else {})}
+
+
+def kv_tokens(recipe, launch=None):
+    """The KV cache a recipe holds, as the plugin is told it (serving.kvTokens): a launch's own plugin block, else
+    ctx x seqs + 1024 x seqs. A plugin block that reports kvTokens 0 (llama.cpp) counts its ctxTokens."""
+    p = profile(recipe["engine"])
+    if "plugin" in p:
+        s = p["plugin"]["serving"]
+        return int(s.get("kvTokens") or s.get("ctxTokens") or 0)
+    L = launch or render(recipe)
+    return int(L["ctx"]) * int(L["seqs"]) + 1024 * int(L["seqs"])
+
+
+def setup_vram_gb(recipe, launch=None, vram_gb=None):
+    """GPU memory of the whole setup the recipe runs on: the card's vram_gb (or the one given) x cards x machines."""
+    L = launch or render(recipe)
+    per_card = card(recipe["card"])["vram_gb"] if vram_gb is None else vram_gb
+    return (per_card or 0) * (L.get("cards") or 1) * (L.get("machines") or 1)
+
+
+def below_kv_floor(recipe, launch=None, vram_gb=None):
+    """True for a recipe on a setup with more than KV_FLOOR_ABOVE_VRAM_GB that holds less than KV_FLOOR_TOKENS of KV."""
+    L = launch or render(recipe)
+    return setup_vram_gb(recipe, L, vram_gb) > KV_FLOOR_ABOVE_VRAM_GB and kv_tokens(recipe, L) < KV_FLOOR_TOKENS
+
+
+def kv_floor_exempt():
+    """Recipe paths (relative to recipes/) accepted before the KV floor, kept as evidence and out of the plugin."""
+    f = RECIPES.parent / KV_FLOOR_EXEMPT
+    return set(json.loads(f.read_text())["recipes"]) if f.exists() else set()
 
 
 # ----------------------------------------------------------------------------- the server under test
@@ -359,7 +404,7 @@ def lab_spec(recipe, launch, args):
         def __init__(self):
             self.recipe, self.image, self.entrypoint = {"id": "lab"}, launch["image"], launch["entrypoint"]
             self.arguments, self.port, self.disk = list(launch["args"]), launch["port"], args.disk
-            self.name = f"local-ai-lab-{recipe['card']}"[:60]
+            self.name = (getattr(args, "label", None) or f"local-ai-lab-{recipe['card']}")[:60]
             tok = Path.home() / ".cache" / "huggingface" / "token"
             self.env = {**(launch.get("env") or {}), **({"HF_TOKEN": tok.read_text().strip()} if tok.exists() else {})}
             self.vram_gb = card(recipe["card"])["vram_gb"] or 0
@@ -384,12 +429,17 @@ def lab_spec(recipe, launch, args):
 def rented(recipe, launch, args):
     import rent as vr  # Vast and RunPod: offers, create, poll, destroy
     spec = lab_spec(recipe, launch, args)
-    ns = argparse.Namespace(vast_min_inet=args.min_inet, vast_min_cuda=args.min_cuda or launch.get("min_cuda") or 12.9, vast_max_price=args.max_price, cloud="COMMUNITY", disk=args.disk, vast_any_host=getattr(args, "any_host", False))
+    needs = launch.get("needs") or {}
+    # a host with the RAM the recipe states plus room for the OS and the container runtime, and an NVMe-class disk when it reads from one
+    ns = argparse.Namespace(vast_min_inet=args.min_inet, vast_min_cuda=args.min_cuda or launch.get("min_cuda") or 12.9, vast_max_price=args.max_price, cloud="COMMUNITY", disk=max(args.disk, int((needs.get("disk_gb") or 0) + 10)), vast_any_host=getattr(args, "any_host", False),
+                            vast_min_ram=getattr(args, "min_ram", None) or (int(needs["host_ram_gb"] * 1.1 + 8) if needs.get("host_ram_gb") else 0),
+                            vast_min_disk_bw=getattr(args, "min_disk_bw", None) or (1500 if needs.get("fast_storage") == "nvme" else 0),
+                            vast_min_pcie=getattr(args, "min_pcie", 0) or 0, vast_max_inet_cost=getattr(args, "max_inet_cost", 0.02))
     provider = vr.PROVIDERS[args.on](ns)
     if getattr(args, "machine", None):  # compare.py: the machine the other engine just ran on
         every = provider.offers
         provider.offers = lambda spec, exclude: [o for o in every(spec, set()) if o.get("machine_id") == args.machine]
-    exclude = set()
+    exclude = set(getattr(args, "exclude_machine", None) or [])  # hosts known not to start the container
     for attempt in range(1, 3):
         handle = provider.create(spec, exclude)
         handle["port"] = spec.port
@@ -404,8 +454,8 @@ def rented(recipe, launch, args):
                 if not started and time.monotonic() - t0 > 900:
                     exclude.update({handle.get("offer"), handle.get("machine")})
                     raise vr.StartStalled(note)
-                if time.monotonic() - t0 > 3600:
-                    raise SystemExit("not ready within an hour")
+                if time.monotonic() - t0 > getattr(args, "ready_timeout", 5400):  # pull, download and load: about an hour for 70 GB at 300 Mbps
+                    raise SystemExit(f"not ready within {getattr(args, 'ready_timeout', 5400)}s")
                 time.sleep(10)
             log(f"ready after {int(time.monotonic() - t0)}s at {handle['endpoint']}")
             return handle["endpoint"], {"on": args.on, "gpu": handle.get("gpu"), "host": handle.get("host"), "cost_h": handle.get("cost"),
@@ -439,6 +489,9 @@ def cmd_try(args):
     recipe = {"model": args.model, "weights": args.weights, "engine": f"{p['id']}@{pin(p)[:12]}",
               "set": sets, "card": args.card}
     launch = render(recipe)
+    if below_kv_floor(recipe, launch):
+        raise SystemExit(f"{kv_tokens(recipe, launch)} KV tokens on {setup_vram_gb(recipe, launch):g} GB: a setup over "
+                         f"{KV_FLOOR_ABOVE_VRAM_GB} GB needs at least {KV_FLOOR_TOKENS} (raise ctx or seqs)")
     if args.dry_run:
         print(json.dumps({"recipe": recipe, "launch": launch}, indent=2))
         return 0
@@ -562,6 +615,10 @@ def check_needs(n):
 
 def cmd_check(_):
     bad = []
+    exempt = kv_floor_exempt()
+    gone = sorted(x for x in exempt if not (RECIPES / x).exists())
+    if gone:
+        bad.append(f"registry/{KV_FLOOR_EXEMPT}: lists recipes that do not exist: {', '.join(gone)}")
     for f in sorted(RECIPES.rglob("*.json")):
         r = json.loads(f.read_text())
         name = f.relative_to(ROOT)
@@ -591,6 +648,13 @@ def cmd_check(_):
             assert not r["proof"][0].get("reported") or r["proof"][0].get("src"), "a reported proof names its source"
             assert need <= set(r["proof"][0]["gates"].split()), "latest proof lacks a gate"
             assert f.stat().st_size <= MAX_RECIPE_BYTES, f"{f.stat().st_size} bytes"
+            rel = str(f.relative_to(RECIPES))
+            low = not p.get("withdrawn") and below_kv_floor(r, launch)
+            if rel in exempt:
+                assert low, f"listed in {KV_FLOOR_EXEMPT} but not below the KV floor; remove it from the list"
+            else:
+                assert not low, (f"{kv_tokens(r, launch)} KV tokens on {setup_vram_gb(r, launch):g} GB: below the "
+                                 f"{KV_FLOOR_TOKENS}-token floor for setups over {KV_FLOOR_ABOVE_VRAM_GB} GB")
         except (AssertionError, KeyError, ValueError, SystemExit, FileNotFoundError) as e:
             bad.append(f"{name}: {e}")
     print("\n".join(bad) or f"recipes ok: {len(list(RECIPES.rglob('*.json')))}")
@@ -620,6 +684,13 @@ def main():
     t.add_argument("--max-price", type=float, default=1.5)
     t.add_argument("--disk", type=int, default=60)
     t.add_argument("--any-host", action="store_true", help="vast: also unverified hosts (the gates are the same; for cards verified hosts never offer)")
+    t.add_argument("--min-pcie", type=float, default=0, help="vast: minimum host-to-device GB/s (offload recipes: experts cross PCIe every token)")
+    t.add_argument("--max-inet-cost", type=float, default=0.02, help="vast: maximum $ per GB downloaded (0: no limit)")
+    t.add_argument("--ready-timeout", type=int, default=5400, help="seconds from rent to a serving engine")
+    t.add_argument("--min-ram", type=int, help="vast: minimum host RAM GB (default needs.host_ram_gb x 1.1 + 8; the recipe's needs stay as measured)")
+    t.add_argument("--min-disk-bw", type=int, help="vast: minimum disk MB/s (default 1500 when the recipe reads from NVMe)")
+    t.add_argument("--exclude-machine", type=int, action="append", help="vast: never rent this machine id (e.g. one whose runtime cannot start the container)")
+    t.add_argument("--label", help="rented instance label (default local-ai-lab-<card>), e.g. to tell a campaign's boxes apart")
     t.add_argument("--dry-run", action="store_true")
     cv = sub.add_parser("convert")
     cv.add_argument("card")
