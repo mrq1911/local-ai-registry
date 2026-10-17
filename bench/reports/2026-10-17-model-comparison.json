@@ -266,6 +266,176 @@
     "Timing includes prompt processing, transport and request delays; not pure decoding TPS.",
     "Total runtime includes setup and transitions; Qwen3.8 27B included the initial Docker image download.",
     "Agent checks use Inspect ReAct with the Aider Polyglot Python subset; hidden graders enforce some interface and exact-output details not explicit in prompts.",
-    "Full transcripts, prompts, endpoint configuration and credentials are excluded from this summary."
-  ]
+    "Full transcripts, prompts, endpoint configuration and credentials are excluded from this summary.",
+    "The xhigh comparison changes reasoning controls, output budgets, time limits and runner version together; differences from baseline cannot be attributed to reasoning level alone.",
+    "Matching conditions applies within each comparison group; all five runs use the same sample order.",
+    "Xhigh runtime spans first evaluation start to final completion; baseline runtime also includes campaign startup."
+  ],
+  "max_reasoning_comparison": {
+    "settings": {
+      "seed": 42,
+      "epochs": 1,
+      "temperature": 0,
+      "concurrency": 1,
+      "max_output_tokens_per_call": 32768,
+      "sample_time_limit_seconds": 1800,
+      "agent_turn_limit": 30,
+      "agent_total_output_token_limit": 131072,
+      "thinking_level": "xhigh; verified server template controls",
+      "request_timeout_seconds": 900,
+      "chat_template_kwargs": {
+        "enable_thinking": true,
+        "reasoning_effort": "xhigh",
+        "reasoning_strength": "xhigh"
+      }
+    },
+    "matching_conditions_and_sample_order": true,
+    "same_samples_as_baseline": true,
+    "models": [
+      {
+        "model": "qwen3.8-flash-next-q2_0",
+        "elapsed_seconds": 3966.0,
+        "evaluations": [
+          {
+            "preset": "reasoning",
+            "conditions": "0187ab35e4e1",
+            "completed": 20,
+            "planned": 20,
+            "metric": "accuracy",
+            "score": 0.75,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 2,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 6.376044356497005,
+            "output_tokens_per_model_call_second": 133.4755395132234
+          },
+          {
+            "preset": "instructions",
+            "conditions": "b0bb9ca6a0cf",
+            "completed": 20,
+            "planned": 20,
+            "metric": "prompt_strict_acc",
+            "score": 1.0,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 4.729442987998482,
+            "output_tokens_per_model_call_second": 133.81436194264003
+          },
+          {
+            "preset": "tools",
+            "conditions": "768002e0eef2",
+            "completed": 20,
+            "planned": 20,
+            "metric": "accuracy",
+            "score": 0.85,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 1,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 1.8607610745239072,
+            "output_tokens_per_model_call_second": 176.89926658924722
+          },
+          {
+            "preset": "coding",
+            "conditions": "ec64c2053337",
+            "completed": 20,
+            "planned": 20,
+            "metric": "mean",
+            "score": 0.45,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 6,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 71.03903996146983,
+            "output_tokens_per_model_call_second": 153.57144831444813
+          },
+          {
+            "preset": "agent-coding",
+            "conditions": "3493a0933858",
+            "completed": 5,
+            "planned": 5,
+            "metric": "accuracy",
+            "score": 0.4,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 6.756381170009263,
+            "output_tokens_per_model_call_second": 136.7193431891298
+          }
+        ]
+      },
+      {
+        "model": "muse-glimmer-30b",
+        "elapsed_seconds": 3289.0,
+        "evaluations": [
+          {
+            "preset": "reasoning",
+            "conditions": "0187ab35e4e1",
+            "completed": 20,
+            "planned": 20,
+            "metric": "accuracy",
+            "score": 0.75,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 9.10425752052106,
+            "output_tokens_per_model_call_second": 103.12315272347551
+          },
+          {
+            "preset": "instructions",
+            "conditions": "b0bb9ca6a0cf",
+            "completed": 20,
+            "planned": 20,
+            "metric": "prompt_strict_acc",
+            "score": 0.9,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 2,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 17.020959152956493,
+            "output_tokens_per_model_call_second": 175.6428724597393
+          },
+          {
+            "preset": "tools",
+            "conditions": "768002e0eef2",
+            "completed": 20,
+            "planned": 20,
+            "metric": "accuracy",
+            "score": 0.6,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 2.765989392530173,
+            "output_tokens_per_model_call_second": 96.23657233859028
+          },
+          {
+            "preset": "coding",
+            "conditions": "ec64c2053337",
+            "completed": 20,
+            "planned": 20,
+            "metric": "mean",
+            "score": 0.5,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 34.32563926902367,
+            "output_tokens_per_model_call_second": 97.3860914576857
+          },
+          {
+            "preset": "agent-coding",
+            "conditions": "3493a0933858",
+            "completed": 5,
+            "planned": 5,
+            "metric": "accuracy",
+            "score": 0.2,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 1,
+            "sample_limit_counts": {
+              "turn": 1
+            },
+            "median_model_call_seconds": 1.8306094639701769,
+            "output_tokens_per_model_call_second": 127.63269666145213
+          }
+        ]
+      }
+    ]
+  }
 }

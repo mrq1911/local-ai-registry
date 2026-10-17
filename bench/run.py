@@ -58,6 +58,16 @@ def base_url(value):
     return value.rstrip("/")
 
 
+def json_object(value):
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise argparse.ArgumentTypeError("supply a JSON object") from error
+    if not isinstance(parsed, dict):
+        raise argparse.ArgumentTypeError("supply a JSON object")
+    return parsed
+
+
 def parser():
     cli = argparse.ArgumentParser(description="local model evaluations with Inspect AI")
     commands = cli.add_subparsers(dest="command", required=True)
@@ -78,6 +88,9 @@ def parser():
     run.add_argument("--agent-turns", type=positive, default=30)
     run.add_argument("--agent-output-tokens", type=positive, default=32768)
     run.add_argument("--time-limit", type=positive, default=900, help="seconds per sample")
+    run.add_argument("--request-timeout", type=positive, default=600, help="seconds per API request")
+    run.add_argument("--chat-template-kwargs", type=json_object,
+                     help="server-supported chat template options as a JSON object")
     run.add_argument("--dry-run", action="store_true", help="print settings without loading tasks or contacting servers")
     report = commands.add_parser("summary", help="compare locally saved scores and timings")
     report.add_argument("--csv", action="store_true")
@@ -101,12 +114,14 @@ def settings(args, preset):
         "turn_limit": args.agent_turns if agent else None,
         "token_limit": f"output:{args.agent_output_tokens}" if agent else None,
         "time_limit": args.time_limit,
-        "timeout": 600,
+        "timeout": args.request_timeout,
         "max_retries": 1,
         "max_samples": 1,
         "max_connections": 1,
         "sandbox_network": "none",
         "model_args": {"strict_tools": False, "stream": False},
+        "extra_body": ({"chat_template_kwargs": args.chat_template_kwargs}
+                       if args.chat_template_kwargs is not None else None),
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "requirements_sha256": hashlib.sha256((ROOT / "requirements.txt").read_bytes()).hexdigest(),
     }
@@ -209,6 +224,7 @@ def run_evaluations(args):
         options = {key: config[key] for key in (
             "limit", "epochs", "sample_shuffle", "max_tokens", "temperature", "turn_limit",
             "token_limit", "time_limit", "timeout", "max_retries", "max_samples", "max_connections",
+            "extra_body",
         )}
         logs = inspect_eval(
             task, model=f"openai-api/local/{args.model}", model_base_url=args.base_url,

@@ -29,6 +29,11 @@ class RunnerTest(unittest.TestCase):
             with self.assertRaises(run.argparse.ArgumentTypeError):
                 run.base_url(url)
 
+    def test_template_options_require_an_object(self):
+        for value in ("[]", "null", "invalid"):
+            with self.assertRaises(run.argparse.ArgumentTypeError):
+                run.json_object(value)
+
     def test_agent_containers_have_no_network(self):
         from inspect_ai import Task
         from inspect_ai.dataset import Sample
@@ -109,6 +114,8 @@ class RunnerTest(unittest.TestCase):
                     "run", "reasoning", "--base-url", f"http://127.0.0.1:{server.server_port}/v1",
                     "--model", "fixture", "--label", "test-model", "--machine", "test-machine",
                     "--api-key-file", str(key), "--limit", "3",
+                    "--chat-template-kwargs", '{"reasoning_effort":"xhigh","reasoning_strength":"xhigh","enable_thinking":true}',
+                    "--max-tokens", "32768", "--request-timeout", "900",
                 ])
                 task = Task(dataset=[Sample(id="a", input="alpha", target="correct"),
                                      Sample(id="b", input="beta", target="correct"),
@@ -142,6 +149,10 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(path, "/v1/chat/completions")
             self.assertEqual(request["model"], "fixture")
             self.assertEqual(auth, "Bearer fixture-secret")
+            self.assertEqual(request["chat_template_kwargs"], {
+                "reasoning_effort": "xhigh", "reasoning_strength": "xhigh", "enable_thinking": True,
+            })
+            self.assertEqual(request["max_tokens"], 32768)
 
 
 if __name__ == "__main__":

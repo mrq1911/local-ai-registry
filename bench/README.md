@@ -77,6 +77,21 @@ contacting a model.
 ## fair comparisons
 
 saved comparison: [Muse Glimmer 30B, Qwen3.8 27B and Flash Next Q2_0, 2026-10-17](reports/2026-10-17-model-comparison.json).
+
+| model | reasoning / response budget | reasoning | instructions | tools | coding | agent coding | minutes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Qwen3.8 27B EXL3 3bpw | server default / 8k | 70% | 85% | 90% | 15% | 20% | 84.2 |
+| Muse Glimmer 30B Q4 | server default / 8k | 75% | 100% | 60% | 35% | 20% | 43.1 |
+| Qwen3.8 Flash Next Q2_0 | server default / 8k | 70% | 95% | 75% | 20% | 40% | 38.7 |
+| Qwen3.8 Flash Next Q2_0 | xhigh / 32k | 75% | 100% | 85% | 45% | 40% | 66.1 |
+| Muse Glimmer 30B Q4 | xhigh / 32k | 75% | 90% | 60% | 50% | 20% | 54.8 |
+
+20 samples per category, except agent coding with five. baseline thinking levels
+were not verified. xhigh runs also raise time and agent output budgets, so changes
+do not isolate reasoning effort. settings match within each budget group, with the
+same samples across all runs. Qwen 27B runtime includes initial image downloads;
+xhigh timings span the evaluations. raw evaluation data stays local.
+
 the summary includes scores, timings, budgets and limitations; full transcripts stay local.
 
 defaults use a fixed shuffle seed of 42, temperature 0, one concurrent request,
@@ -101,6 +116,19 @@ model-call time, including prompt processing and transport. they are not pure de
 speed or time to first token. missing usage stays unknown. compare timing on the
 same tasks with similar output lengths, warm servers, and consistent server-side
 cache settings. use a serving load benchmark separately for saturated throughput.
+
+for explicit reasoning controls, use `--chat-template-kwargs` with options verified
+against the running server's template. for example, Qwen templates may use
+`{"enable_thinking":true,"reasoning_effort":"xhigh"}`, while Muse uses
+`{"reasoning_strength":"xhigh"}`. unsupported options can be silently ignored;
+verify the rendered prompt where the server exposes it. these options are sent on
+every request and recorded in the conditions fingerprint. do not put credentials
+in template options.
+
+reasoning shares the output budget with the final answer. a larger-budget comparison
+can use `--max-tokens 32768 --agent-output-tokens 131072 --time-limit 1800
+--request-timeout 900`. record it separately from the default 8k runs: changing both
+effort and budgets does not isolate the effect of reasoning effort alone.
 
 ## local data
 
