@@ -156,12 +156,115 @@
           "output_tokens_per_model_call_second": 110.45482643366906
         }
       ]
+    },
+    {
+      "model": "qwen3.8-flash-next-q2_0",
+      "elapsed_seconds": 2324.094689,
+      "evaluations": [
+        {
+          "preset": "reasoning",
+          "conditions": "13650b186142",
+          "completed": 20,
+          "planned": 20,
+          "metric": "accuracy",
+          "score": 0.7,
+          "sample_errors": 0,
+          "samples_with_capped_calls": 4,
+          "sample_limit_counts": {},
+          "median_model_call_seconds": 6.256190346961375,
+          "output_tokens_per_model_call_second": 130.60405893901677
+        },
+        {
+          "preset": "instructions",
+          "conditions": "35e568a5d4dd",
+          "completed": 20,
+          "planned": 20,
+          "metric": "prompt_strict_acc",
+          "score": 0.95,
+          "sample_errors": 0,
+          "samples_with_capped_calls": 1,
+          "sample_limit_counts": {},
+          "median_model_call_seconds": 4.545005911495537,
+          "output_tokens_per_model_call_second": 146.96581946862796
+        },
+        {
+          "preset": "tools",
+          "conditions": "a83f0ad8efec",
+          "completed": 20,
+          "planned": 20,
+          "metric": "accuracy",
+          "score": 0.75,
+          "sample_errors": 0,
+          "samples_with_capped_calls": 1,
+          "sample_limit_counts": {},
+          "median_model_call_seconds": 1.7985625865403563,
+          "output_tokens_per_model_call_second": 118.69318307361284
+        },
+        {
+          "preset": "coding",
+          "conditions": "16d2dd901bdb",
+          "completed": 20,
+          "planned": 20,
+          "metric": "mean",
+          "score": 0.2,
+          "sample_errors": 0,
+          "samples_with_capped_calls": 15,
+          "sample_limit_counts": {},
+          "median_model_call_seconds": 61.167273902508896,
+          "output_tokens_per_model_call_second": 130.53052396763619
+        },
+        {
+          "preset": "agent-coding",
+          "conditions": "a25caca87d38",
+          "completed": 5,
+          "planned": 5,
+          "metric": "accuracy",
+          "score": 0.4,
+          "sample_errors": 0,
+          "samples_with_capped_calls": 0,
+          "sample_limit_counts": {},
+          "median_model_call_seconds": 5.411538858083077,
+          "output_tokens_per_model_call_second": 136.56099238722783,
+          "task_details": [
+            {
+              "id": "aider/polyglot_python_tree-building",
+              "failure_review": "Six exact error-message failures.",
+              "individual_tests_passed": 7,
+              "individual_tests_total": 13
+            },
+            {
+              "id": "aider/polyglot_python_forth",
+              "failure_review": "Two exact error-message failures: invalid definition versus illegal operation.",
+              "individual_tests_passed": 52,
+              "individual_tests_total": 54
+            },
+            {
+              "id": "aider/polyglot_python_zebra-puzzle",
+              "failure_review": "Passed.",
+              "individual_tests_passed": 2,
+              "individual_tests_total": 2
+            },
+            {
+              "id": "aider/polyglot_python_hangman",
+              "failure_review": "Passed.",
+              "individual_tests_passed": 7,
+              "individual_tests_total": 7
+            },
+            {
+              "id": "aider/polyglot_python_beer-song",
+              "failure_review": "Missing blank separator lines between verses.",
+              "individual_tests_passed": 5,
+              "individual_tests_total": 8
+            }
+          ]
+        }
+      ]
     }
   ],
   "limitations": [
     "Small fixed subsets, not official leaderboard results or a general intelligence score.",
     "Timing includes prompt processing, transport and request delays; not pure decoding TPS.",
-    "Total runtime includes setup and transitions; Qwen included the initial Docker image download.",
+    "Total runtime includes setup and transitions; Qwen3.8 27B included the initial Docker image download.",
     "Agent checks use Inspect ReAct with the Aider Polyglot Python subset; hidden graders enforce some interface and exact-output details not explicit in prompts.",
     "Full transcripts, prompts, endpoint configuration and credentials are excluded from this summary."
   ]
