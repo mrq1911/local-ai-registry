@@ -268,7 +268,7 @@
     "Agent checks use Inspect ReAct with the Aider Polyglot Python subset; hidden graders enforce some interface and exact-output details not explicit in prompts.",
     "Full transcripts, prompts, endpoint configuration and credentials are excluded from this summary.",
     "The xhigh comparison changes reasoning controls, output budgets, time limits and runner version together; differences from baseline cannot be attributed to reasoning level alone.",
-    "Matching conditions applies within each comparison group; all five runs use the same sample order.",
+    "Matching conditions applies within each comparison group; all six runs use the same sample order.",
     "Xhigh runtime spans first evaluation start to final completion; baseline runtime also includes campaign startup."
   ],
   "max_reasoning_comparison": {
@@ -433,6 +433,124 @@
             },
             "median_model_call_seconds": 1.8306094639701769,
             "output_tokens_per_model_call_second": 127.63269666145213
+          }
+        ]
+      },
+      {
+        "model": "turboderp-Qwen3.8-27B-exl3-3.00bpw",
+        "elapsed_seconds": 6708.0,
+        "evaluations": [
+          {
+            "preset": "reasoning",
+            "conditions": "0187ab35e4e1",
+            "completed": 20,
+            "planned": 20,
+            "metric": "accuracy",
+            "score": 0.8,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 1,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 6.530668120482005,
+            "output_tokens_per_model_call_second": 114.29859547687968
+          },
+          {
+            "preset": "instructions",
+            "conditions": "b0bb9ca6a0cf",
+            "completed": 20,
+            "planned": 20,
+            "metric": "prompt_strict_acc",
+            "score": 0.9,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 7.383786418009549,
+            "output_tokens_per_model_call_second": 112.10555246929931
+          },
+          {
+            "preset": "tools",
+            "conditions": "768002e0eef2",
+            "completed": 20,
+            "planned": 20,
+            "metric": "accuracy",
+            "score": 0.85,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 0,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 1.4230294899898581,
+            "output_tokens_per_model_call_second": 101.70019766897333
+          },
+          {
+            "preset": "coding",
+            "conditions": "ec64c2053337",
+            "completed": 20,
+            "planned": 20,
+            "metric": "mean",
+            "score": 0.45,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 2,
+            "sample_limit_counts": {},
+            "median_model_call_seconds": 84.53070418850984,
+            "output_tokens_per_model_call_second": 112.57055942666365
+          },
+          {
+            "preset": "agent-coding",
+            "conditions": "3493a0933858",
+            "completed": 5,
+            "planned": 5,
+            "metric": "accuracy",
+            "score": 0.2,
+            "sample_errors": 0,
+            "samples_with_capped_calls": 2,
+            "sample_limit_counts": {
+              "token": 2
+            },
+            "median_model_call_seconds": 8.408777546021156,
+            "output_tokens_per_model_call_second": 102.75466063052303,
+            "task_details": [
+              {
+                "id": "aider/polyglot_python_tree-building",
+                "individual_tests_passed": 7,
+                "individual_tests_total": 13,
+                "capped_calls": 0,
+                "limit": null
+              },
+              {
+                "id": "aider/polyglot_python_forth",
+                "individual_tests_passed": 0,
+                "individual_tests_total": 54,
+                "capped_calls": 4,
+                "limit": {
+                  "type": "token",
+                  "limit": 131072.0,
+                  "reason": "Output token limit exceeded. value: 131,356; limit: 131,072"
+                }
+              },
+              {
+                "id": "aider/polyglot_python_zebra-puzzle",
+                "individual_tests_passed": 2,
+                "individual_tests_total": 2,
+                "capped_calls": 0,
+                "limit": null
+              },
+              {
+                "id": "aider/polyglot_python_hangman",
+                "individual_tests_passed": 0,
+                "individual_tests_total": 7,
+                "capped_calls": 4,
+                "limit": {
+                  "type": "token",
+                  "limit": 131072.0,
+                  "reason": "Output token limit exceeded. value: 131,488; limit: 131,072"
+                }
+              },
+              {
+                "id": "aider/polyglot_python_beer-song",
+                "individual_tests_passed": 0,
+                "individual_tests_total": 8,
+                "capped_calls": 0,
+                "limit": null
+              }
+            ]
           }
         ]
       }

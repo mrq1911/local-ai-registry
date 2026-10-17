@@ -85,12 +85,15 @@ saved comparison: [Muse Glimmer 30B, Qwen3.8 27B and Flash Next Q2_0, 2026-10-17
 | Qwen3.8 Flash Next Q2_0 | server default / 8k | 70% | 95% | 75% | 20% | 40% | 38.7 |
 | Qwen3.8 Flash Next Q2_0 | xhigh / 32k | 75% | 100% | 85% | 45% | 40% | 66.1 |
 | Muse Glimmer 30B Q4 | xhigh / 32k | 75% | 90% | 60% | 50% | 20% | 54.8 |
+| Qwen3.8 27B EXL3 3bpw | xhigh / 32k | 80% | 90% | 85% | 45% | 20% | 111.8 |
 
 20 samples per category, except agent coding with five. baseline thinking levels
 were not verified. xhigh runs also raise time and agent output budgets, so changes
 do not isolate reasoning effort. settings match within each budget group, with the
 same samples across all runs. Qwen 27B runtime includes initial image downloads;
 xhigh timings span the evaluations. raw evaluation data stays local.
+Qwen 27B exhausted the 128k agent output budget on Forth and Hangman; these two
+attempts took 43.6 minutes combined and both failed.
 
 the summary includes scores, timings, budgets and limitations; full transcripts stay local.
 
