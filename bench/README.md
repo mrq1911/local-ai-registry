@@ -76,6 +76,9 @@ contacting a model.
 
 ## fair comparisons
 
+saved comparison: [Muse Glimmer 30B and Qwen3.8 27B, 2026-10-17](reports/2026-10-17-muse-vs-qwen.json).
+the summary includes scores, timings, budgets and limitations; full transcripts stay local.
+
 defaults use a fixed shuffle seed of 42, temperature 0, one concurrent request,
 8,192 output tokens per call, one retry for request failures and a 900-second sample
 limit. agent tasks additionally have 30 turns and 32,768 total output tokens per
