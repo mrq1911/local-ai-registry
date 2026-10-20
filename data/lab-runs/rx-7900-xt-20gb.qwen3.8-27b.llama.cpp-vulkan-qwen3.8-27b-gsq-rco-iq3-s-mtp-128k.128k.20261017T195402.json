@@ -1,0 +1,69 @@
+{
+ "recipe": {
+  "model": "qwen3.8-27b",
+  "weights": "ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF@d562806dbafae37109975e970aae91b43e73b440",
+  "engine": "llama.cpp-vulkan-qwen3.8-27b-gsq-rco-iq3-s-mtp-128k@1086b8815273",
+  "set": {},
+  "card": "rx-7900-xt-20gb"
+ },
+ "where": {
+  "on": "owner",
+  "gpu": "AMD Radeon RX 7900 XT"
+ },
+ "passed": true,
+ "proof": {
+  "at": "2026-10-17",
+  "on": "owner",
+  "gpu": "AMD Radeon RX 7900 XT",
+  "launch_sha256": "14a0bf6d3b3ff194ba742deab0827c71b5cd10ee2170d19a65aeef3784c0c19b",
+  "gates": "load chat reasoning tools context speed",
+  "tps": 54.9,
+  "prefill": 287,
+  "served": "/models/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf"
+ },
+ "evidence": {
+  "ok": {
+   "load": true,
+   "chat": true,
+   "reasoning": true,
+   "tools": true,
+   "context": true,
+   "speed": true
+  },
+  "chat": {
+   "content": "Red, yellow, blue",
+   "finish": "stop"
+  },
+  "reasoning": {
+   "thinking_chars": 65,
+   "content": "391"
+  },
+  "tools": {
+   "call": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "arguments": "{\"city\":\"Paris\"}"
+     },
+     "id": "PXTRQmmvabVhIC2S7frgnBAoF9jiYVRu"
+    }
+   ],
+   "reply": "It's currently **17°C** in Paris, with **overcast** skies.",
+   "finish": "stop",
+   "calls_again": 0,
+   "thinking_chars": 68
+  },
+  "context": {
+   "prompt_tokens": 106294,
+   "seconds": 370.7,
+   "content": "58213"
+  },
+  "speed": {
+   "window_s": 30,
+   "tokens_total": 7051,
+   "seconds_total": 110.1
+  }
+ },
+ "launch_config_sha256": null
+}

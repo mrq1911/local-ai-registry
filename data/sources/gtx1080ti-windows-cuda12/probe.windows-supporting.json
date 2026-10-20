@@ -1,0 +1,30 @@
+{
+  "schema": "gtx218/windows-supporting-probe/v1",
+  "at_utc": "2026-10-15T08:53:13.452133+00:00",
+  "os": "Windows-10-10.0.19045-SP0",
+  "architecture": "AMD64",
+  "memory": {
+    "physical_total_bytes": 68655202304,
+    "physical_available_bytes": 46476992512,
+    "memory_load_percent": 32
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce GTX 1080 Ti",
+    "memory_total_mib": 11264.0,
+    "memory_used_mib": 1277.0,
+    "utilization_percent": 9.0,
+    "temperature_c": 46.0,
+    "power_w": 23.61,
+    "driver": "582.28"
+  },
+  "models_disk": {
+    "total_bytes": 640132575232,
+    "free_bytes": 112549134336
+  },
+  "limitations": [
+    "Windows desktop GPU clients remain running",
+    "GPU memory is whole-device usage under WDDM",
+    "No Linux swap, NVMe bandwidth, or reference-panel result is inferred",
+    "This supporting probe does not replace the recipe-kit submission"
+  ]
+}

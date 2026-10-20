@@ -41,6 +41,7 @@ REG = ROOT / "registry"
 
 # registry hardware id -> provider GPU names. vast names use underscores for spaces in queries.
 GPUS = {
+    "gtx-1080-ti-11gb": {"vast": "GTX 1080 Ti"},
     "rtx-3060-12gb": {"runpod": ["NVIDIA GeForce RTX 3060"], "vast": "RTX 3060"},
     "rtx-3060-ti-8gb": {"runpod": ["NVIDIA GeForce RTX 3060 Ti"], "vast": "RTX 3060 Ti"},
     "rtx-4060-8gb": {"runpod": ["NVIDIA GeForce RTX 4060"], "vast": "RTX 4060"},
@@ -150,7 +151,8 @@ class Spec:
                 target = mount["target"].rstrip("/")
                 if not provision and subdir:
                     target = f"{target}/{subdir}"
-                steps.append(("weights", target, (repo, revision)))
+                files = mount.get("files") or provision.get("files")
+                steps.append(("weights", target, (repo, revision, files)))
         return steps
 
     def onstart_script(self):
@@ -164,11 +166,32 @@ class Spec:
                 encoded = base64.b64encode(payload.encode()).decode()
                 parts.append(f"mkdir -p {shlex.quote(os.path.dirname(target))} && printf %s {encoded} | base64 -d > {shlex.quote(target)}")
             else:
-                repo, revision = payload
-                code = f"from huggingface_hub import snapshot_download as d; d({repo!r}, revision={revision!r}, local_dir={target!r})"
+                repo, revision, files = (list(payload) + [None])[:3]  # a 2-tuple from an older caller means the whole revision
+                patterns = [p.strip() for p in files.split(",") if p.strip()] if isinstance(files, str) else list(files or [])
+                allow = f", allow_patterns={patterns!r}" if patterns else ""
+                code = f"from huggingface_hub import snapshot_download as d; d({repo!r}, revision={revision!r}, local_dir={target!r}{allow})"
+                # some engine images (the official llama.cpp CUDA builds) ship python3 with no pip, so
+                # `pip install huggingface_hub` cannot run; the download then falls back to curl (present in the
+                # image), which retries a dropped transfer and resumes it instead of starting over
+                fallback = ("import fnmatch,json,os,subprocess,urllib.request\n"
+                            f"repo,rev,target={repo!r},{revision!r},{target!r}\n"
+                            f"patterns={patterns!r}\n"
+                            "os.makedirs(target,exist_ok=True)\n"
+                            "tree=json.load(urllib.request.urlopen('https://huggingface.co/api/models/%s/tree/%s'%(repo,rev)))\n"
+                            "files=[s for s in tree if s.get('type')=='file' and (not patterns or any(fnmatch.fnmatch(s['path'],p) for p in patterns))]\n"
+                            "if patterns and not files: raise SystemExit('nothing in the revision matches %r' % (patterns,))\n"
+                            "for s in files:\n"
+                            " path=s['path'];dest=os.path.join(target,path)\n"
+                            " if os.path.exists(dest) and os.path.getsize(dest)==s.get('size'): continue\n"
+                            " print('downloading',path,s.get('size'),'bytes',flush=True)\n"
+                            " subprocess.check_call(['curl','-L','--fail','--retry','8','--retry-all-errors','--retry-delay','5','-C','-','--create-dirs','-o',dest,'https://huggingface.co/%s/resolve/%s/%s'%(repo,rev,path)])\n"
+                            " if s.get('size') is not None and os.path.getsize(dest)!=s['size']:\n"
+                            "  raise SystemExit('short download: '+path)\n")
                 parts.append(f"mkdir -p {shlex.quote(target)}")
-                parts.append(f"({shlex.join([python, '-c', 'import huggingface_hub'])} || {shlex.join([python, '-m', 'pip', 'install', '-q', 'huggingface_hub'])})")
-                parts.append(shlex.join([python, "-c", code]))
+                hub = (f"({shlex.join([python, '-c', 'import huggingface_hub'])} || "
+                       f"{shlex.join([python, '-m', 'pip', 'install', '-q', 'huggingface_hub'])}) && "
+                       f"{shlex.join([python, '-c', code])}")
+                parts.append(f"({hub} || {shlex.join([python, '-c', fallback])})")
         command = [self.entrypoint] if self.entrypoint else []
         parts.append("exec " + shlex.join(command + self.arguments))
         return " && ".join(parts)

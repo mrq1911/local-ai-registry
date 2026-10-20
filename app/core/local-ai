@@ -382,7 +382,9 @@ phase_start() {
     if [[ $backend == "amd-rocm" && $CT == "podman" ]]; then
       a+=(--device /dev/kfd --group-add keep-groups)
     elif [[ $backend == "amd-rocm" ]]; then
-      a+=(--device /dev/kfd --group-add video --group-add render)
+      # by number: docker looks a name up in the image's /etc/group, and the llama.cpp images have no render group
+      a+=(--device /dev/kfd)
+      while read -r v; do a+=(--group-add "$v"); done < <(stat -c %g /dev/kfd /dev/dri/renderD* | sort -u)
     fi
     # oneCCL opens every by-path link it finds, so the engine sees only its own cards'
     nodes=() uuids=()

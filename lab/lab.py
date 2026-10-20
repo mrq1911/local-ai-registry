@@ -17,6 +17,7 @@ lab/runs/ (data, kept); the recipe goes to recipes/<card>/ (production). Standar
 import argparse
 import datetime as dt
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -366,10 +367,28 @@ def gates(endpoint, launch):
     target = int(launch["ctx"] * 0.85)
     filler = " ".join(f"Line {i}: the archive notes that shipment {i * 7 % 997} left dock {i % 13} on schedule." for i in range(target // 24))  # ~23.6 tokens a line (measured: 32,834 tokens from 1,473 lines)
     prompt = filler + " The access code for the vault is 58213. " + "Anything else is routine."
-    c, u, secs = chat(endpoint, served, [{"role": "user", "content": prompt + "\n\nWhat is the access code for the vault? Reply with only the code."}])
+    dropped = []  # seconds each dropped attempt ran before its connection dropped
+    for attempt in range(3):  # a rented host's port mapping can silently drop a connection that stays idle for
+        started = time.monotonic()
+        try:                  # minutes while the prompt is prefilled; the retried prompt answers from the server's
+            c, u, secs = chat(endpoint, served, [{"role": "user", "content": prompt + "\n\nWhat is the access code for the vault? Reply with only the code."}])
+            break             # prefix cache, so the retry costs seconds, and the gate is the same check
+        except (OSError, http.client.HTTPException) as e:
+            if isinstance(e, TimeoutError) or isinstance(getattr(e, "reason", None), TimeoutError):
+                raise         # a timeout is the card being slow, not a dropped connection: fail the gate, never retry
+            dropped.append(round(time.monotonic() - started, 1))
+            if attempt == 2:
+                raise
+            log("context gate: the connection dropped before the answer; retrying")
+            time.sleep(5)
+    else:  # unreachable: the last attempt raises
+        raise SystemExit("context gate: the connection dropped three times")
     got = u.get("prompt_tokens") or 0
     ok["context"] = "58213" in (c["message"].get("content") or "") and got >= launch["ctx"] * 0.6
     ev["context"] = {"prompt_tokens": got, "seconds": round(secs, 1), "content": (c["message"].get("content") or "")[-80:]}
+    if dropped:  # the number came from a retry: say which attempt answered and how long the dropped attempt ran
+        ev["context"]["retried"] = attempt
+        ev["context"]["dropped_s"] = dropped
     if u.get("peak_memory_gb"):
         ev["context"]["peak_gib"] = round(u["peak_memory_gb"] * 1e9 / 2**30, 2)
     # speed: decode at concurrency 1, measured over the first 30 s of a streamed answer; the answer still runs
@@ -377,7 +396,9 @@ def gates(endpoint, launch):
     tps, total, secs = stream_rate(endpoint, served, "Write a detailed 600-word story about a lighthouse keeper.")
     ok["speed"] = tps >= MIN_TPS
     ev["speed"] = {"window_s": 30, "tokens_total": total, "seconds_total": round(secs, 1)}
-    prefill = round(got / ev["context"]["seconds"]) if got and ev["context"]["seconds"] else None
+    # a retried answer comes from the server's prefix cache, so its seconds is not a prefill time: leave the
+    # number out rather than publish a cached rate (the run can be repeated for a real prefill measurement)
+    prefill = None if dropped else (round(got / ev["context"]["seconds"]) if got and ev["context"]["seconds"] else None)
     proof = {"gates": " ".join(g for g in GATES if ok.get(g)), "tps": round(tps, 1), "prefill": prefill, "served": served}
     return all(ok.get(g) for g in GATES), proof, {"ok": ok, **ev}
 
@@ -419,7 +440,7 @@ def lab_spec(recipe, launch, args):
             for w in (launch["weights"] if isinstance(launch["weights"], list) else [launch["weights"]]):
                 if w.get("layout", "dir") != "dir":
                     raise SystemExit(f"weights layout {w.get('layout')} cannot be provisioned on a rented host yet")
-                self.provision.append(("weights", w["at"], (w["repo"], w["revision"])))
+                self.provision.append(("weights", w["at"], (w["repo"], w["revision"], w.get("files"))))
 
         def onstart_script(self):  # HF_HUB_OFFLINE=1 in a recipe is for the engine; the download before it must reach the Hub
             return re.sub(r"(?<![\w/.-])([\w/.-]*python3?) -c ", r"env HF_HUB_OFFLINE=0 \1 -c ", vr.Spec.onstart_script(self))
