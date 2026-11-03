@@ -1,0 +1,35 @@
+version: "3.8"
+services:
+  web:
+    image: lumir/local-ai-site:latest
+    networks:
+      - gateway
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "2"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 128M
+      update_config:
+        order: start-first
+        failure_action: rollback
+      labels:
+        swarmpit.service.deployment.autoredeploy: "true"
+        traefik.docker.network: gateway
+        traefik.http.routers.local-ai.rule: Host(`local-ai.lark.hydration.cloud`)
+        traefik.http.routers.local-ai.tls: "true"
+        traefik.http.routers.local-ai.tls.certresolver: myresolver
+        traefik.http.services.local-ai.loadbalancer.server.port: "80"
+networks:
+  gateway:
+    external: true

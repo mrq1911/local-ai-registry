@@ -1,0 +1,73 @@
+name: lark site
+
+# builds upstream's site into lumir/local-ai-site; swarmpit on lark redeploys :latest on its own
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: source repository
+        default: sybil-solutions/local-ai-registry
+      ref:
+        description: source branch, tag or commit
+        default: main
+      force:
+        description: rebuild even if this commit already has an image
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lark-site
+  cancel-in-progress: false
+
+env:
+  IMAGE: lumir/local-ai-site
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: fork
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repo || 'sybil-solutions/local-ai-registry' }}
+          ref: ${{ inputs.ref || 'main' }}
+          path: src
+          persist-credentials: false
+      - id: src
+        env:
+          FORCE: ${{ inputs.force || false }}
+        run: |
+          sha=$(git -C src rev-parse --short=8 HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [ "$FORCE" != true ] && docker manifest inspect "$IMAGE:$sha" > /dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "$IMAGE:$sha already pushed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: steps.src.outputs.skip != 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - if: steps.src.outputs.skip != 'true'
+        working-directory: src/site
+        run: npm ci --no-audit --no-fund && npm run build
+      - if: steps.src.outputs.skip != 'true'
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          SHA: ${{ steps.src.outputs.sha }}
+        run: |
+          cp -r src/site/out fork/deploy/lark-site/out
+          rm -f fork/deploy/lark-site/out/_headers
+          docker build -t "$IMAGE:$SHA" -t "$IMAGE:latest" fork/deploy/lark-site
+          echo "$DOCKERHUB_TOKEN" | docker login -u lumir --password-stdin
+          docker push "$IMAGE:$SHA"
+          docker push "$IMAGE:latest"
+          echo "pushed $IMAGE:$SHA" >> "$GITHUB_STEP_SUMMARY"
