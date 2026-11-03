@@ -17,7 +17,6 @@ dist/           catalog.json: everything above, rendered, at most 3 picks per GP
 site/           local.sybilsolutions.ai and its API (static, on Cloudflare Pages)
 sdk/            js/ and python/: pick a recipe for a GPU, print the command
 app/            local-ai: run a recipe on any Linux, from a terminal or a status bar
-images/         the container images we build (gateway, tabbyapi-exl3, ...)
 plugin/         what the Omarchy Local AI plugin reads (paths are fixed)
 data/           everything the registry held before, as it was; nothing reads it
 docs/           design.md
@@ -36,6 +35,11 @@ docs/           design.md
 
 - `weights`: a Hugging Face repo at a full commit.
 - `engine`: a profile in `registry/engines/`, pinned to its image digest.
+
+A launch with a reproducible failure can be withdrawn by prepending a proof with
+`withdrawn: true`, its source URL and reason. Catalogs and plugin exports omit it;
+historical proofs and recipe IDs stay in source. Requalify the exact launch with
+a fresh passing lab proof before offering it again.
 - `set`: only the settings that differ from the profile's defaults.
 - `proof`: the latest passing runs. A proof marked `proxy` was run on the sibling card it names; one marked `legacy` passed the older acceptance (load and chat) and is waiting for a full run.
 
@@ -47,7 +51,49 @@ A launch that keeps weights in system RAM or reads them from disk while serving 
 "needs": {"host_ram_gb": 75, "disk_gb": 85.14, "fast_storage": "nvme"}
 ```
 
-`host_ram_gb` is the free system RAM the server takes: how far MemAvailable falls from before the start to its lowest point while the lab gates run (not the weight file sizes; the plugin compares it with MemAvailable), `disk_gb` the space for the weights, and `fast_storage: "nvme"` means the weights directory must be on a local NVMe SSD. `lab.py check` validates it; `plugin/v2/recipes.json` carries it.
+`host_ram_gb` is the required free system RAM: the measured fall in MemAvailable from before the start to its lowest point while the lab gates run, rounded up with any documented safety headroom (not the weight file sizes; the plugin compares it with MemAvailable). `disk_gb` is the space for the weights, and `fast_storage: "nvme"` means the weights directory must be on a local NVMe SSD. `lab.py check` validates it; plugin exports carry it.
+
+## Prepared weights and container resources
+
+The v3 plugin contract carries `prepare: {at, args, verifyArgs, gpu, sizeGb}` and
+`resources: {memoryBytes, memorySwapBytes, memlockUnlimited, ipcLock}`. Preparation
+uses the serving image, environment and resource limits. Raw inputs remain read-only;
+verification mounts every input and generated output read-only and receives no GPU.
+`memorySwapBytes` is Docker's total memory plus swap limit; equal memory and swap
+values disable swap. Arbitrary Docker flags remain excluded from plugin exports.
+
+The plugin stages generated packs privately, verifies them with the pinned image,
+and publishes them atomically under a hash of the complete preparation contract.
+It verifies every reuse. Stop retains completed packs; Forget removes only managed,
+unused downloads. Disk eligibility counts missing generated output separately from
+verified raw inputs. The by-hand SDK steps carry these same resource and verification
+arguments; they do not implement the plugin's managed lifecycle.
+
+Typed launches require a passing proof bound to the full rendered `launch_sha256`.
+Changing the image, inputs, environment, resources or preparation requires new
+acceptance evidence. v2 excludes any recipe requiring preparation or typed resources
+rather than silently dropping those requirements. This contract adds no new qualified
+hardware recipes by itself; fidelity, exact-image lab gates and promotion remain separate.
+
+Environment names use case-sensitive identifiers (`[A-Za-z_][A-Za-z0-9_]*`),
+including Intel's mixed-case runtime guards. Values must be strings without NUL;
+this does not admit arbitrary Docker options.
+
+### Intel Arc Pro B70 host-RAM offload
+
+`intel/intel-arc-pro-b70-32gb/qwen3.8-flash-next.sglang.64k` runs
+Qwen3.8-Flash-Next EXL3 3.05 bpw on one 32 GB B70. Routed experts and the complete
+n-gram table stay in host USM RAM; the GPU uses an expert cache without dropping
+expert picks. It requires **128 GB available host RAM**, including conservative
+headroom, and **85.14 GB disk** for the pinned weights. NVMe is not required.
+
+The launch limits context to 65,536 tokens, uses a private 64 GiB shared-memory
+mount and a 128 GiB container memory limit with swap disabled. Intel driver-owned
+host allocations are not fully reflected in Docker's memory counter: eligibility
+uses host MemAvailable, not the container counter. It needs no host IPC,
+unconfined seccomp or privileged container. Vision is image-only; this pinned
+image has no video decoder. The exact launch, image and weights are bound to its
+lab proof; Omarchy Local AI's v3 catalog preserves the resource requirements.
 
 ## Running a recipe
 
@@ -56,7 +102,47 @@ Every program runs one the same way:
 1. Download the weights at the pinned commit.
 2. Write the config file.
 3. Start the image on a bridge network with the card passed through (`--gpus` on NVIDIA, the render node on AMD and Intel).
-4. Put the [gateway](https://github.com/0xSero/local-ai-images) in front, which serves the OpenAI, Anthropic and Responses APIs.
+4. Put the [gateway](https://github.com/sybil-solutions/local-ai-images) in front, which serves the OpenAI, Anthropic and Responses APIs.
+
+## Browsing models and hardware
+
+[Models](https://local.sybilsolutions.ai/models/) and
+[hardware](https://local.sybilsolutions.ai/hardware/) are full-text searchable.
+Directories and configurations use the original padded card layout: two columns
+on wide screens, one on small screens. Every view has a "Sort by" control and
+direction toggle; numbers start largest-first and unknown values stay last.
+Each model has a `/models/<id>/` page with its rendered Hugging Face model card
+and every recorded hardware configuration. Hardware pages at `/gpu/<id>/`
+show original-source photos, specifications and configuration cards by model.
+Photo captions link the original manufacturer page and explicitly label
+representative family or chassis images.
+Hardware directory cards use self-hosted NVIDIA, AMD, Intel and Apple logos
+from [Simple Icons 16.0.0](https://github.com/simple-icons/simple-icons/tree/16.0.0/icons).
+Generic CPU hardware keeps a neutral CPU badge rather than inventing a manufacturer.
+Original product photos and their attribution remain on hardware detail pages.
+
+Configuration cards distinguish card count, machine count, total memory and
+documented host RAM, disk/NVMe and logical-CPU requirements. Each card shows
+separate decode, prefill and context tiles, plus the selected recipe's evidence.
+The recipe picker shows the selected recipe's engine and weight format; its
+options name engine, format and context. Selecting a recipe changes its decode,
+prefill, context, evidence and command together, and Command opens that exact
+command within the card with a copy button and a link to the full recipe.
+Unknown measurements show "—" and sort after recorded measurements.
+Configuration search also matches exact token counts, with or without thousands
+separators, as well as the short context labels shown in the picker.
+The command is one Bash invocation containing the existing SDK's pinned steps;
+engine prerequisites and source-specific setup still apply. Multi-machine
+recipes run on each machine with its documented rank and network settings.
+
+Model cards are public Hugging Face README snapshots pinned to their source
+commit, cached in `site/lib/model-cards.data.json` and sanitized during the
+static build. Missing catalog model links are resolved from verified upstream
+metadata or matching public repositories, with provenance shown on the page.
+`npm run build` fetches newly used cards; to refresh existing snapshots, run
+`node scripts/model-cards.mjs --refresh` from `site/`, then build.
+Hardware image provenance lives in `site/lib/hardware-photos.json`; add the
+original-source image and its attribution there when adding hardware.
 
 ## Adding or updating a recipe
 
@@ -68,7 +154,13 @@ python3 lab/lab.py try <repo>@<commit> --model <id> --engine tabbyapi-exl3 --car
 
 `try` rents the card on Vast (or RunPod, or `--on endpoint --endpoint <url>` for your own machine), runs the six checks, writes the recipe only if all pass, and destroys the machine. `lab/campaign.py <plan>` runs many at once. `lab.py convert <card>` re-runs a `legacy` recipe the same way. Then `make` and open a pull request; CI runs `make check`.
 
+### Bounties
+
+Cards and models without a tested recipe carry a **$50 bounty**: [open bounties](https://github.com/sybil-solutions/local-ai-registry/issues?q=is%3Aissue+is%3Aopen+label%3Abounty).
+Claim one with `/attempt`, run it with the [recipe kit](https://github.com/sybil-solutions/local-ai-recipe-kit), and open one PR with the recipe `lab.py try --on endpoint` wrote and the kit's submission file under [`data/sources/recipe-kit/<card id>/`](data/sources/recipe-kit/README.md).
+The rules are in [BOUNTIES.md](https://github.com/sybil-solutions/.github/blob/main/BOUNTIES.md); every PR follows [CONTRIBUTING](https://github.com/sybil-solutions/.github/blob/main/CONTRIBUTING.md).
+
 ## Using it
 
-- **Omarchy Local AI** reads `plugin/v2/recipes.json`.
+- **Omarchy Local AI 6.10+** reads `plugin/v3/recipes.json`; older versions retain the independent v2 export and cache.
 - **Anything else** reads `dist/catalog.json` (or https://local.sybilsolutions.ai/api/v2/catalog.json): `cards.<card>.picks` lists recipe keys for one card, first one recommended; `cards.<card>.setups` does the same for each setup (one card, several cards in one machine, several machines); and `recipes.<key>.launch` is the rendered launch. The SDKs in `sdk/` do the matching for you.

@@ -1,0 +1,76 @@
+{
+ "recipe": {
+  "model": "qwen3.5-9b",
+  "weights": "TheMelonGod/Qwen3.5-9B-exl3@d6da14ea3d914a7571f8880775749404087c72bd",
+  "engine": "sglang-exl3-multiarch@9d95829ab41a",
+  "set": {
+   "ctx": 131072,
+   "pool": 131072,
+   "chunk": 2048,
+   "mem": "0.92",
+   "extra": "--max-total-tokens 131072 --mamba-ssm-dtype bfloat16 --max-mamba-cache-size 6 --cuda-graph-max-bs-decode 2 --cuda-graph-max-bs-prefill 512 --speculative-algorithm NEXTN --speculative-num-steps 3 --speculative-eagle-topk 1 --speculative-num-draft-tokens 4 --speculative-token-map /opt/sglang-exl3/tokenmaps/qwen38_hot32k_v2.pt"
+  },
+  "card": "rtx-5090-laptop-24gb"
+ },
+ "where": {
+  "on": "owner",
+  "gpu": "NVIDIA GeForce RTX 5090 Laptop GPU"
+ },
+ "passed": true,
+ "proof": {
+  "at": "2026-10-12",
+  "on": "owner",
+  "gpu": "NVIDIA GeForce RTX 5090 Laptop GPU",
+  "launch_sha256": "217a437d1a89caeb28739ac606de5bdc4c9d4203d483d8c30efdae84bed4c348",
+  "gates": "load chat reasoning tools context speed",
+  "tps": 139.2,
+  "prefill": 2063,
+  "served": "Qwen3.5-9B-exl3-d6da14ea"
+ },
+ "evidence": {
+  "ok": {
+   "load": true,
+   "chat": true,
+   "reasoning": true,
+   "tools": true,
+   "context": true,
+   "speed": true
+  },
+  "chat": {
+   "content": "\n\nRed, Yellow, Blue",
+   "finish": "stop"
+  },
+  "reasoning": {
+   "thinking_chars": 782,
+   "content": "\n\n391"
+  },
+  "tools": {
+   "call": [
+    {
+     "id": "call_4dab91cbe6014f25acc31ebc",
+     "index": 0,
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "arguments": "{\"city\": \"Paris\"}"
+     }
+    }
+   ],
+   "reply": "\n\nThe current weather in Paris is 17°C with overcast skies.",
+   "finish": "stop",
+   "calls_again": 0,
+   "thinking_chars": 147
+  },
+  "context": {
+   "prompt_tokens": 106252,
+   "seconds": 51.5,
+   "content": "\n\n58213"
+  },
+  "speed": {
+   "window_s": 30,
+   "tokens_total": 4599,
+   "seconds_total": 32.3
+  }
+ },
+ "launch_config_sha256": null
+}

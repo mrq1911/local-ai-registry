@@ -36,7 +36,8 @@ def detect(cat, gpu, vram=None):
     n = _norm(gpu)
     hits = [(i, c) for i, c in cat["cards"].items()
             if any(x and x in n for x in _names(i, c)) and (not vram or abs(c["vram_gb"] - vram) <= 2)]
-    hits.sort(key=lambda x: -max(len(y) for y in _names(*x) if y and y in n))
+    hits.sort(key=lambda x: (-max(len(y) for y in _names(*x) if y and y in n),
+                             abs(x[1]["vram_gb"] - vram) if vram else 0))
     return hits[0][0] if hits else None
 
 
@@ -66,6 +67,12 @@ def _files(w):
     return "".join(" " + _q(f) for f in (fs if isinstance(fs, list) else [fs]))
 
 
+def _resources(l):
+    r = l.get('resources') or {}
+    return ([f"--memory {r['memoryBytes']}"] if r.get('memoryBytes') else []) + ([f"--memory-swap {r['memorySwapBytes']}"] if r.get('memorySwapBytes') else []) + \
+        (['--ulimit memlock=-1:-1'] if r.get('memlockUnlimited') else []) + (['--cap-add IPC_LOCK'] if r.get('ipcLock') else [])
+
+
 def _host_steps(l):
     """A program on the host. One with pinned packages or weights (MLX, oMLX or llama.cpp on Apple silicon) also downloads
     its weights, writes its launcher and raises the GPU wired-memory limit before it starts."""
@@ -73,6 +80,8 @@ def _host_steps(l):
     if not l.get("pip") and not l.get("weights"):
         return [{"title": "Install", "code": _install(l["install"])}, {"title": "Start the server", "code": " ".join(env + [_q(c) for c in l["command"]])}]
     out = [{"title": "Install the engine", "code": "python3 -m pip install " + " ".join(_q(x) for x in l["pip"]) if l.get("pip") else _install(l["install"])}]
+    if l.get("pip") and re.fullmatch(r"https://\S+\.tar\.gz#sha256=[0-9a-f]{64}", l.get("install") or ""):
+        out.append({"title": "Install the native engine", "code": _install(l["install"])})
     if l.get("weights"):
         out.append({"title": "Download the weights", "code": "\n\n".join(
             f"hf download {w['repo']}{_files(w)} \\\n  --revision {w['revision']} \\\n  --local-dir {w['at']}"
@@ -104,7 +113,8 @@ def steps(r):
     """The steps to run a recipe by hand: download the weights, write the config, start the container."""
     l = r["launch"]
     name = (r.get("key") or r["model"]).split("/")[-1]
-    out = [{"title": "Set up first", "code": f"# {l['setup']}\n# Full instructions: {l.get('source')}"}] if l.get("setup") else []
+    src = f"\n# Full instructions: {l['source']}" if l.get("source") else ""
+    out = [{"title": "Set up first", "code": f"# {l['setup']}{src}"}] if l.get("setup") else []
     if l.get("kind") == "host":
         return out + _host_steps(l)
     image = l.get("image")
@@ -119,7 +129,8 @@ def steps(r):
         d = f"~/models/{w['repo'].split('/')[1]}-{w['revision'][:8]}"
         if w.get("layout") == "hub":
             dl.append(f"hf download {w['repo']}{_files(w)} \\\n  --revision {w['revision']}")
-            mounts.append("-v ~/.cache/huggingface:/root/.cache/huggingface")
+            if "-v ~/.cache/huggingface:/root/.cache/huggingface" not in mounts:  # several hub weights share one cache mount
+                mounts.append("-v ~/.cache/huggingface:/root/.cache/huggingface")
         else:
             dl.append(f"hf download {w['repo']}{_files(w)} \\\n  --revision {w['revision']} \\\n  --local-dir {d}")
             mounts.append(f"-v {d}:{w['at']}:ro")
@@ -138,13 +149,16 @@ def steps(r):
         else:
             args.append(_value(a[i])); i += 1
     if l.get("prepare"):
-        prep = ["docker run --rm", GPU.get(l.get("backend") or "nvidia", GPU["nvidia"]), '--user "$(id -u):$(id -g)"', "-e HOME=/tmp",
-                f"-v {prepared}:{l['prepare']['at']}"] + mounts
-        prep += [f"--entrypoint {_q(ep[0])}"] if ep else []
-        prep += [image] + [_q(x) for x in l["prepare"]["args"]]
+        options = list(l.get('flags') or []) + _resources(l) + ([f"--shm-size {l['shm']}"] if l.get('shm') else [])
+        options += [f"-e {k}={_value(v)}" for k, v in (l.get('env') or {}).items() if k != 'NVIDIA_VISIBLE_DEVICES']
+        options += [f"--entrypoint {_q(ep[0])}"] if ep else []
+        prep = ["docker run --rm", "" if l['prepare'].get('gpu') is False else GPU.get(l.get("backend") or "nvidia", GPU["nvidia"]), '--user "$(id -u):$(id -g)"', "-e HOME=/tmp"]
+        prep += options + [f"-v {prepared}:{l['prepare']['at']}"] + mounts + [image] + [_q(x) for x in ep[1:] + l["prepare"]["args"]]
         out.append({"title": "Prepare the model (first start)", "code": f"mkdir -p {prepared}\n" + " \\\n  ".join(x for x in prep if x)})
         mounts.insert(0, f"-v {prepared}:{l['prepare']['at']}:ro")
-    run = ["docker run --rm", GPU.get(l.get("backend") or "nvidia", GPU["nvidia"]), f"-p 8000:{l['port']}"] + list(l.get("flags") or [])
+        if l['prepare'].get('verifyArgs'):
+            out.append({'title': 'Verify the prepared model', 'code': ' '.join(['docker run --rm', '--user "$(id -u):$(id -g)"', '-e HOME=/tmp'] + options + mounts + [image] + [_q(x) for x in ep[1:] + l['prepare']['verifyArgs']])})
+    run = ["docker run --rm", GPU.get(l.get("backend") or "nvidia", GPU["nvidia"]), f"-p 8000:{l['port']}"] + list(l.get("flags") or []) + _resources(l)
     run += [f"--shm-size {l['shm']}"] if l.get("shm") else []
     run += [f"-e {k}={_value(v)}" for k, v in (l.get("env") or {}).items()] + mounts
     run += [f"--entrypoint {_q(ep[0])}"] if ep else []

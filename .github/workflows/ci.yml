@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read  # CI only reads; nothing on a pull request can write to the repo
+
 jobs:
   verify:  # the check branch protection on main requires
     runs-on: ubuntu-24.04
@@ -12,7 +15,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: New image digests have approved build provenance
@@ -20,15 +23,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           IMAGE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          python3 -m unittest discover -s lab -p test_image_trust.py
+          python3 -m unittest discover -s lab
           python3 lab/image_trust.py --base "$IMAGE_BASE"
       - name: Recipes are well-formed, pinned, in the right place and proven
         run: python3 lab/lab.py check
       - name: dist/catalog.json is current
         run: python3 lab/catalog.py --check
-      - name: plugin/v2/recipes.json is current
+      - name: plugin v2 and v3 recipes are current
         run: python3 lab/export_plugin.py --check
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: The JavaScript and Python SDKs agree on every card

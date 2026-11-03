@@ -16,10 +16,23 @@
     "mistral",
     "inkling",
     "ornith",
-    "lfm"
+    "lfm",
+    "nanbeige",
+    "granite"
   ],
   "max_age_days": 240,
   "models": {
+    "underdog-saluki-27b-1.0": {
+      "family": "qwen",
+      "name": "Underdog Saluki 27B 1.0",
+      "released": "2026-10-08",
+      "reasoning": true,
+      "vision": false,
+      "about": "ConwayResearch's mixed 2-bit GGUF quantization of Qwen3.8-27B, using GSQ-RCO weights and an importance matrix for tool calling. This recipe serves text; the optional vision projector is not included.",
+      "good_for": "Local chat, reasoning and tool calls on a 16 GB GPU",
+      "logo": "qwen",
+      "hf": "ConwayResearch/Underdog-Saluki-27B-1.0"
+    },
     "qwen3.8-27b": {
       "family": "qwen",
       "name": "Qwen3.8-27B",
@@ -29,7 +42,25 @@
       "about": "Alibaba's 27B dense model from August 2026, and the strongest model that fits one consumer card. It thinks before it answers, calls tools reliably and reads images, which makes it the default for coding agents and long projects.",
       "good_for": "Coding agents, long documents, everyday assistant work",
       "logo": "qwen",
-      "hf": "Qwen/Qwen3.8-27B"
+      "hf": "Qwen/Qwen3.8-27B",
+      "aa": {
+        "index": 27.6,
+        "name": "Qwen3.8 27B (Medium)",
+        "slug": "qwen3-8-27b-medium",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
+    },
+    "qwen3.8-27b-pi": {
+      "family": "qwen",
+      "name": "Qwen3.8-27B-pi",
+      "released": "2026-09-29",
+      "reasoning": true,
+      "vision": true,
+      "about": "bytkim's Qwen3.8-27B fine-tune for the Pi coding-agent harness, trained with supervised fine-tuning and reinforcement learning. Supports low, medium and xhigh reasoning; the EXL3 build retains a 4-bit MTP head.",
+      "good_for": "Pi coding agents, tool use and long-context projects",
+      "logo": "qwen",
+      "hf": "bytkim/Qwen3.8-27B-pi"
     },
     "qwen3.8-flash-next": {
       "family": "qwen",
@@ -39,7 +70,14 @@
       "vision": true,
       "about": "Qwen3.8's large mixture-of-experts model: far more knowledge than the 27B, with few active parameters, so it stays fast.",
       "good_for": "The most capable model one 96 GB card, or a DGX Spark, runs",
-      "logo": "qwen"
+      "logo": "qwen",
+      "aa": {
+        "index": 39.8,
+        "name": "Qwen3.8-Flash-Next",
+        "slug": "qwen3-8-flash-next",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "qwen3.6-35b-a3b": {
       "family": "qwen",
@@ -49,7 +87,14 @@
       "vision": true,
       "about": "Qwen3.6's 35B mixture-of-experts model with 3B active parameters.",
       "good_for": "Fast general work",
-      "logo": "qwen"
+      "logo": "qwen",
+      "aa": {
+        "index": 18.2,
+        "name": "Qwen3.6 35B A3B (Reasoning)",
+        "slug": "qwen3-6-35b-a3b",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "qwen3.5-9b": {
       "family": "qwen",
@@ -60,7 +105,14 @@
       "about": "Alibaba's 9B model from February 2026: small enough for an 8 GB card, with a 64K–128K window. It thinks, calls tools and stays quick on modest hardware.",
       "good_for": "Fast answers and light agent work on 8–12 GB cards",
       "logo": "qwen",
-      "hf": "Qwen/Qwen3.5-9B"
+      "hf": "Qwen/Qwen3.5-9B",
+      "aa": {
+        "index": 11.2,
+        "name": "Qwen3.5 9B (Reasoning)",
+        "slug": "qwen3-5-9b",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "gemma-4-12b": {
       "family": "gemma",
@@ -70,7 +122,14 @@
       "vision": true,
       "about": "Google's Gemma 4 12B from May 2026: a compact multimodal model with thinking, good with images and documents.",
       "good_for": "Vision, documents and quick chat",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 14.2,
+        "name": "Gemma 4 12B (Reasoning)",
+        "slug": "gemma-4-12b",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "gemma-4-26b-a4b": {
       "family": "gemma",
@@ -80,7 +139,14 @@
       "vision": true,
       "about": "Google's Gemma 4 mixture-of-experts model: 26B total, 4B active, so it runs fast while seeing images and thinking.",
       "good_for": "Fast multimodal work on 16–24 GB cards",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 16.7,
+        "name": "Gemma 4 26B A4B (Reasoning)",
+        "slug": "gemma-4-26b-a4b",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "glm-5.3-flash": {
       "family": "glm",
@@ -90,7 +156,14 @@
       "vision": true,
       "about": "Z.ai's GLM-5.3-Flash, a large mixture-of-experts model for multi-GPU machines.",
       "good_for": "Frontier-class agent work on workstation GPUs",
-      "logo": "zai"
+      "logo": "zai",
+      "aa": {
+        "index": 41.8,
+        "name": "GLM 5.3 Flash",
+        "slug": "glm-5-3-flash",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "deepseek-v4.1-flash": {
       "family": "deepseek",
@@ -100,7 +173,14 @@
       "vision": false,
       "about": "DeepSeek's V4.1 Flash, a large mixture-of-experts model.",
       "good_for": "Frontier-class reasoning on multi-GPU machines",
-      "logo": "deepseek"
+      "logo": "deepseek",
+      "aa": {
+        "index": 39.5,
+        "name": "DeepSeek V4.1 Flash (Max)",
+        "slug": "deepseek-v4-1-flash",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "bonsai-2-27b": {
       "family": "qwen",
@@ -113,6 +193,17 @@
       "logo": "qwen",
       "hf": "prism-ml/Ternary-Bonsai-2-27B-gguf"
     },
+    "welp-35b-a3b": {
+      "family": "qwen",
+      "name": "Welp-35B-A3B",
+      "released": "2026-10-08",
+      "reasoning": true,
+      "vision": false,
+      "about": "Quaedra's 13.2 GB GGUF of Qwen3.6-35B-A3B: the routed experts quantized block-wise with GPTQ error feedback in standard llama.cpp formats, so the full 262k context fits on a 16 GB card.",
+      "good_for": "Fast long-context work on a 16 GB card",
+      "logo": "qwen",
+      "hf": "quaedra/Welp-35B-A3B-GGUF"
+    },
     "deepseek-v4-flash": {
       "family": "deepseek",
       "name": "DeepSeek-V4-Flash",
@@ -121,7 +212,14 @@
       "vision": false,
       "about": "DeepSeek's V4 Flash mixture-of-experts model (and its 0731 and DSpark builds).",
       "good_for": "Long-context reasoning across two or more Sparks",
-      "logo": "deepseek"
+      "logo": "deepseek",
+      "aa": {
+        "index": 24.4,
+        "name": "DeepSeek V4 Flash 0420 (High)",
+        "slug": "deepseek-v4-flash-0420-high",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "step-3.7-flash": {
       "family": "step",
@@ -131,6 +229,23 @@
       "vision": false,
       "about": "StepFun's Step 3.7 Flash mixture-of-experts model.",
       "good_for": "Fast agentic reasoning on two Sparks",
+      "logo": "hf",
+      "aa": {
+        "index": 19.5,
+        "name": "Step 3.7 Flash",
+        "slug": "step-3-7-flash",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
+    },
+    "step-5-preview": {
+      "family": "step",
+      "name": "Step-5-Preview",
+      "released": "2026-09-20",
+      "reasoning": true,
+      "vision": true,
+      "about": "StepFun's Step-5 preview, a ~600B mixture-of-experts model with image and video input.",
+      "good_for": "Frontier-class reasoning and agentic coding on four Sparks",
       "logo": "hf"
     },
     "glm-5.2": {
@@ -141,7 +256,14 @@
       "vision": true,
       "about": "Z.ai's GLM-5.2 flagship, here as an NVFP4 + AQLM hybrid.",
       "good_for": "The largest GLM on three Sparks",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 33.7,
+        "name": "GLM-5.2 (Max)",
+        "slug": "glm-5-2",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "gemma-4-31b": {
       "family": "gemma",
@@ -151,7 +273,14 @@
       "vision": true,
       "about": "Google's dense Gemma 4, 31B parameters.",
       "good_for": "A dense all-rounder with vision",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 14.7,
+        "name": "Gemma 4 31B (Reasoning)",
+        "slug": "gemma-4-31b",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "hy3": {
       "family": "hunyuan",
@@ -161,7 +290,14 @@
       "vision": false,
       "about": "Tencent's Hunyuan 3 (Hy3) 295B mixture-of-experts.",
       "good_for": "A very large model on two Sparks",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 25.3,
+        "name": "Hy3",
+        "slug": "hy3",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "inkling-small": {
       "family": "inkling",
@@ -171,7 +307,14 @@
       "vision": false,
       "about": "Thinking Machines' Inkling Small.",
       "good_for": "Million-token context on two Sparks",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 25.7,
+        "name": "Inkling Small",
+        "slug": "inkling-small",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "laguna-s-2.1": {
       "family": "laguna",
@@ -201,7 +344,14 @@
       "vision": false,
       "about": "inclusionAI's Ling 3.0 Flash mixture-of-experts.",
       "good_for": "Fast chat and tools on one Spark",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 20.1,
+        "name": "Ling 3.0 Flash",
+        "slug": "ling-3-0-flash",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "mimo-v2.5": {
       "family": "mimo",
@@ -211,7 +361,14 @@
       "vision": true,
       "about": "Xiaomi's MiMo V2.5 omni model.",
       "good_for": "Text, image and audio on two Sparks",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 25.2,
+        "name": "MiMo-V2.5",
+        "slug": "mimo-v2-5-0424",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "mimo-v2.6-flash": {
       "family": "mimo",
@@ -221,7 +378,14 @@
       "vision": true,
       "about": "Xiaomi's MiMo V2.6 Flash (RL build).",
       "good_for": "Coding and chat on two Sparks",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 37.9,
+        "name": "MiMo-V2.6-Flash",
+        "slug": "mimo-v2-6-flash",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "muse-glimmer-30b": {
       "family": "muse",
@@ -231,7 +395,14 @@
       "vision": false,
       "about": "Meta's Muse Glimmer 30B.",
       "good_for": "A mid-size model with long context",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 17.5,
+        "name": "Muse Glimmer (High)",
+        "slug": "muse-glimmer",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "nemotron-labs-3-puzzle-75b-a9b": {
       "family": "nemotron",
@@ -251,7 +422,14 @@
       "vision": false,
       "about": "NVIDIA's Nemotron 3.5 Lightning, a small fast mixture-of-experts.",
       "good_for": "Fast chat and tools with a million-token window",
-      "logo": "hf"
+      "logo": "hf",
+      "aa": {
+        "index": 12.9,
+        "name": "Nemotron 3.5 Lightning",
+        "slug": "nemotron-3-5-lightning",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "ornith-1.5-35b-a3b": {
       "family": "ornith",
@@ -271,7 +449,14 @@
       "vision": true,
       "about": "Alibaba's dense Qwen3.6, 27B parameters.",
       "good_for": "A dense all-rounder",
-      "logo": "qwen"
+      "logo": "qwen",
+      "aa": {
+        "index": 21.4,
+        "name": "Qwen3.6 27B (Reasoning)",
+        "slug": "qwen3-6-27b",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "swift-1.5-qwen3.8-27b": {
       "family": "qwen",
@@ -293,7 +478,14 @@
       "about": "Liquid AI's 2.6B hybrid model: tiny and fast, built for on-device work.",
       "good_for": "Quick chat on 8 GB cards",
       "logo": "hf",
-      "hf": "LiquidAI/LFM2.5-2.6B"
+      "hf": "LiquidAI/LFM2.5-2.6B",
+      "aa": {
+        "index": 8.4,
+        "name": "LFM2.5-2.6B",
+        "slug": "lfm2-5-2-6b",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "lfm2.5-8b-a1b": {
       "family": "lfm",
@@ -304,7 +496,14 @@
       "about": "Liquid AI's 8B mixture-of-experts with about 1B active: fast on small cards.",
       "good_for": "Fast chat on 8-10 GB cards",
       "logo": "hf",
-      "hf": "LiquidAI/LFM2.5-8B-A1B"
+      "hf": "LiquidAI/LFM2.5-8B-A1B",
+      "aa": {
+        "index": 7.2,
+        "name": "LFM2.5-8B-A1B",
+        "slug": "lfm2-5-8b-a1b",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "ornith-1.5-9b": {
       "family": "ornith",
@@ -326,7 +525,14 @@
       "about": "Google's Gemma 4 E4B: an efficient on-device multimodal model.",
       "good_for": "Vision and chat on laptops",
       "logo": "hf",
-      "hf": "google/gemma-4-E4B-it"
+      "hf": "google/gemma-4-E4B-it",
+      "aa": {
+        "index": 8.9,
+        "name": "Gemma 4 E4B (Reasoning)",
+        "slug": "gemma-4-e4b",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "glm-5.3": {
       "family": "glm",
@@ -337,7 +543,14 @@
       "about": "Z.ai's full GLM-5.3, the large sibling of GLM-5.3-Flash: frontier-class reasoning and agent work for a four-card workstation.",
       "good_for": "The strongest open model on 4 × RTX PRO 6000",
       "logo": "zai",
-      "hf": "zai-org/GLM-5.3"
+      "hf": "zai-org/GLM-5.3",
+      "aa": {
+        "index": 44.8,
+        "name": "GLM-5.3 (Max)",
+        "slug": "glm-5-3",
+        "estimated": false,
+        "at": "2026-10-05"
+      }
     },
     "diffusiongemma-26b-a4b": {
       "family": "gemma",
@@ -348,7 +561,14 @@
       "about": "Google's discrete-diffusion Gemma 4 26B A4B: decodes blocks of tokens in parallel, with vision and thinking.",
       "good_for": "Very fast generation",
       "logo": "hf",
-      "hf": "google/diffusiongemma-26B-A4B-it"
+      "hf": "google/diffusiongemma-26B-A4B-it",
+      "aa": {
+        "index": 9.5,
+        "name": "DiffusionGemma 26B A4B",
+        "slug": "diffusiongemma-26b-a4b",
+        "estimated": true,
+        "at": "2026-10-05"
+      }
     },
     "gemma-4-26b-a4b-it-awq-4bit": {
       "family": "gemma",
@@ -359,7 +579,10 @@
       "about": "cyankiwi's AWQ INT4 quant of Gemma 4 26B A4B.",
       "good_for": "Fast multimodal MoE in 17 GB",
       "logo": "hf",
-      "hf": "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit"
+      "hf": "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit",
+      "aa": {
+        "of": "gemma-4-26b-a4b"
+      }
     },
     "gemma-4-26b-a4b-it-awq-8bit": {
       "family": "gemma",
@@ -370,7 +593,10 @@
       "about": "cyankiwi's AWQ INT8 quant of Gemma 4 26B A4B.",
       "good_for": "Near-full quality MoE in 29 GB",
       "logo": "hf",
-      "hf": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit"
+      "hf": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit",
+      "aa": {
+        "of": "gemma-4-26b-a4b"
+      }
     },
     "gemma-4-31b-it-awq-4bit": {
       "family": "gemma",
@@ -381,7 +607,10 @@
       "about": "cyankiwi's AWQ INT4 quant of Gemma 4 31B.",
       "good_for": "Dense all-rounder in 21 GB",
       "logo": "hf",
-      "hf": "cyankiwi/gemma-4-31B-it-AWQ-4bit"
+      "hf": "cyankiwi/gemma-4-31B-it-AWQ-4bit",
+      "aa": {
+        "of": "gemma-4-31b"
+      }
     },
     "gemma-4-31b-it-awq-8bit": {
       "family": "gemma",
@@ -392,7 +621,10 @@
       "about": "cyankiwi's AWQ INT8 quant of Gemma 4 31B.",
       "good_for": "Near-full quality dense model in 35 GB",
       "logo": "hf",
-      "hf": "cyankiwi/gemma-4-31B-it-AWQ-8bit"
+      "hf": "cyankiwi/gemma-4-31B-it-AWQ-8bit",
+      "aa": {
+        "of": "gemma-4-31b"
+      }
     },
     "gemma-4-12b-it-awq-int4": {
       "family": "gemma",
@@ -403,7 +635,10 @@
       "about": "cyankiwi's AWQ INT4 quant of Gemma 4 12B.",
       "good_for": "Vision and quick chat in 11 GB",
       "logo": "hf",
-      "hf": "cyankiwi/gemma-4-12B-it-AWQ-INT4"
+      "hf": "cyankiwi/gemma-4-12B-it-AWQ-INT4",
+      "aa": {
+        "of": "gemma-4-12b"
+      }
     },
     "diffusiongemma-26b-a4b-it-awq-int4": {
       "family": "gemma",
@@ -414,7 +649,10 @@
       "about": "cyankiwi's AWQ INT4 quant of DiffusionGemma 26B A4B.",
       "good_for": "Very fast generation in 17 GB",
       "logo": "hf",
-      "hf": "cyankiwi/diffusiongemma-26B-A4B-it-AWQ-INT4"
+      "hf": "cyankiwi/diffusiongemma-26B-A4B-it-AWQ-INT4",
+      "aa": {
+        "of": "diffusiongemma-26b-a4b"
+      }
     },
     "qwen3.8-27b-awq-bf16-int4": {
       "family": "qwen",
@@ -425,7 +663,10 @@
       "about": "cyankiwi's AWQ INT4 quant of Qwen3.8-27B, linear attention kept in BF16.",
       "good_for": "Coding agents in 29 GB",
       "logo": "qwen",
-      "hf": "cyankiwi/Qwen3.8-27B-AWQ-BF16-INT4"
+      "hf": "cyankiwi/Qwen3.8-27B-AWQ-BF16-INT4",
+      "aa": {
+        "of": "qwen3.8-27b"
+      }
     },
     "qwen3.8-27b-awq-fp8": {
       "family": "qwen",
@@ -436,7 +677,10 @@
       "about": "cyankiwi's AWQ FP8 quant of Qwen3.8-27B.",
       "good_for": "Near-full quality coding agents in 31 GB",
       "logo": "qwen",
-      "hf": "cyankiwi/Qwen3.8-27B-AWQ-FP8"
+      "hf": "cyankiwi/Qwen3.8-27B-AWQ-FP8",
+      "aa": {
+        "of": "qwen3.8-27b"
+      }
     },
     "qwen3.8-flash-next-awq-int4": {
       "family": "qwen",
@@ -447,7 +691,10 @@
       "about": "cyankiwi's AWQ INT4 quant of Qwen3.8-Flash-Next.",
       "good_for": "Large MoE in 188 GB",
       "logo": "qwen",
-      "hf": "cyankiwi/Qwen3.8-Flash-Next-AWQ-INT4"
+      "hf": "cyankiwi/Qwen3.8-Flash-Next-AWQ-INT4",
+      "aa": {
+        "of": "qwen3.8-flash-next"
+      }
     },
     "glm-5.3-flash-awq-int4": {
       "family": "glm",
@@ -458,7 +705,10 @@
       "about": "cyankiwi's AWQ INT4 quant of GLM-5.3-Flash.",
       "good_for": "Agent work on two Sparks or multi-GPU",
       "logo": "zai",
-      "hf": "cyankiwi/GLM-5.3-Flash-AWQ-INT4"
+      "hf": "cyankiwi/GLM-5.3-Flash-AWQ-INT4",
+      "aa": {
+        "of": "glm-5.3-flash"
+      }
     },
     "glm-5.3-awq-int4": {
       "family": "glm",
@@ -469,10 +719,72 @@
       "about": "cyankiwi's AWQ INT4 quant of GLM-5.3.",
       "good_for": "Frontier reasoning on large multi-GPU rigs",
       "logo": "zai",
-      "hf": "cyankiwi/GLM-5.3-AWQ-INT4"
+      "hf": "cyankiwi/GLM-5.3-AWQ-INT4",
+      "aa": {
+        "of": "glm-5.3"
+      }
+    },
+    "bonsai-2-9b": {
+      "family": "qwen",
+      "name": "Bonsai 2 9B",
+      "released": "2026-09-23",
+      "reasoning": true,
+      "vision": true,
+      "about": "Prism ML's ternary Bonsai 2 9B, based on Qwen3.5-9B, with thinking and tool calling. The Q2_0 packing requires upstream llama.cpp with Bonsai Hadamard support.",
+      "good_for": "Compact local chat and agent work on consumer GPUs",
+      "logo": "qwen",
+      "hf": "prism-ml/Ternary-Bonsai-2-9B-gguf"
+    },
+    "nemotron-3.5-bolt-74b-a9b": {
+      "family": "nemotron",
+      "name": "Nemotron 3.5 Bolt 74B-A9B",
+      "released": "2026-10-15",
+      "reasoning": true,
+      "vision": true,
+      "about": "NVIDIA's hybrid Mamba-Transformer MoE (74B total, about 9B active), compressed from Nemotron 3.5 Super VL and quantization-aware distilled to a 24 GB checkpoint (IQ2_XXS experts, NVFP4 Mamba layers, Q8_0 attention), with an image projector.",
+      "good_for": "Local agents, chat, reasoning, tool calls and images on one 32 GB GPU",
+      "logo": "hf",
+      "hf": "nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF"
+    },
+    "nanbeige4.3-33b": {
+      "family": "nanbeige",
+      "name": "Nanbeige4.3-33B",
+      "released": "2026-10-24",
+      "reasoning": true,
+      "vision": false,
+      "about": "Nanbeige4.3, a 33B dense Llama-architecture model with thinking, tool calls and a 512K window.",
+      "good_for": "Reasoning and tool calls on one 32 GB card",
+      "logo": "hf",
+      "hf": "Nanbeige/Nanbeige4.3-33B"
+    },
+    "granite-4.2-30b": {
+      "family": "granite",
+      "name": "Granite 4.2 30B",
+      "released": "2026-08-07",
+      "reasoning": true,
+      "vision": false,
+      "about": "IBM's 30B dense model (64 layers). It thinks before it answers and calls tools.",
+      "good_for": "Reasoning and tool calls at 128K",
+      "logo": "hf",
+      "hf": "ibm-granite/granite-4.2-30b"
+    },
+    "lfm2.5-24b-a2b": {
+      "family": "lfm",
+      "name": "LFM2.5-24B-A2B",
+      "released": "2026-10-12",
+      "reasoning": true,
+      "vision": false,
+      "about": "Liquid AI's 24B hybrid mixture-of-experts (about 2B active; 30 short-convolution and 10 attention layers, 64 experts). It reasons before it answers and calls tools.",
+      "good_for": "Fast chat and tool calls at 128K",
+      "logo": "hf",
+      "hf": "LiquidAI/LFM2.5-24B-A2B"
     }
   },
   "builds": {
+    "ConwayResearch/Underdog-Saluki-27B-1.0@1336c0b5d74dfe6ad7f793577092f5effd9f97c6": {
+      "format": "GGUF · IQ2-mix",
+      "size_gb": 7.898369152
+    },
     "TheMelonGod/Qwen3.5-9B-exl3@22ef1303062e0f6d0b282440f8c1f685947f4938": {
       "format": "EXL3 · 3 bpw, 6-bit head",
       "size_gb": 6.47
@@ -676,6 +988,10 @@
       "format": "GGUF · QAD-Q4_0",
       "size_gb": 1.59
     },
+    "plavno/LFM2.5-2.6B-AutoRound-W4A16@2244dd328189f0b58d9b938b576937ad7d216b7f": {
+      "format": "AutoRound · INT4 W4A16 (g128, sym, GPTQ-packed)",
+      "size_gb": 1.79
+    },
     "google/gemma-4-12B-it-qat-q4_0-gguf@29d097773436b69ff9feafd636ab4cf873786537": {
       "format": "GGUF · Q4_0",
       "size_gb": 6.98
@@ -800,17 +1116,9 @@
       "format": "ModelOpt · NVFP4",
       "size_gb": 182
     },
-    "Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw@25a44fdbf16862a46b7cc9921142c6c81350af2f": {
-      "format": "EXL3 TR3 · 4 bpw",
-      "size_gb": 175.64
-    },
     "deepseek-ai/DeepSeek-V4-Flash-0731@7872f01b1d1fe23eabc4c98b48bffcef5a386062": {
       "format": "safetensors · FP8",
       "size_gb": 166.887
-    },
-    "Mia-AiLab/Qwen3.8-Flash-Next-NVFP4@925d7be6c14c6c9442ef83e8f05b5a3c39304f69": {
-      "format": "NVFP4",
-      "size_gb": 105.88
     },
     "LibertAIDAI/GLM-5.3-Flash-NVFP4@caca4e6a4ebbd66f159d3d2fc256683fd6e27177": {
       "format": "NVFP4",
@@ -819,10 +1127,6 @@
     "Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw@64ba41b6c916a587db06eae2e19b7845f7be6e6b": {
       "format": "EXL3 · 2.9 bpw",
       "size_gb": 210.6
-    },
-    "canada-quant/GLM-5.3-Flash-W4A16-MTP@8f425cd3a2ad57233862029b77b05966327ad1a1": {
-      "format": "W4A16 · INT4 GPTQ + MTP",
-      "size_gb": 190.85627058
     },
     "Youssofal/Qwen3.8-27B-MTPLX-Bare-Speed@b59d7002368575f08a58ba0d26686b53a9c162d6": {
       "format": "MLX · 4-bit, native MTP",
@@ -899,6 +1203,50 @@
     "0xSero/DeepSeek-V4.1-Flash-Spark@08ac8b3defc9a239ba0baf51059687c689406519": {
       "format": "EXL3 · mixed 2/3/5-bit routed experts, native base for the rest",
       "size_gb": 461.9
+    },
+    "mrq/Qwen3.8-27B-pi-exl3-3.00bpw@3412e8c5a6cafdc75924fd52e339dee72de88285": {
+      "format": "EXL3 · 3.00 bpw, head 6 bits, MTP 4 bits",
+      "size_gb": 13.84
+    },
+    "carloslfu/Qwen3.8-Flash-Next-MLX-4bit@e9d552f83de4665d243d5c9cf73201a1ca6c16d7": {
+      "format": "MLX · 4-bit (g64), native MTP",
+      "size_gb": 105.3
+    },
+    "prism-ml/Ternary-Bonsai-2-9B-gguf@5b2abb02362efbed46bbe204014b02837778b2c2": {
+      "format": "GGUF · Q2_0",
+      "size_gb": 2.556640128
+    },
+    "nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF@e0fecb69cb3e5e4c5e8a056fa2aec98c78e91246": {
+      "format": "GGUF · IQ2_XXS / NVFP4 / Q8_0 (NVIDIA 24 GB)",
+      "size_gb": 23.75
+    },
+    "RedHatAI/Qwen3.8-27B-INT4@bf08f3dbd9a324e53956920aad378a1f1b6dd24a": {
+      "format": "compressed-tensors · W4A16 INT4",
+      "size_gb": 19.47
+    },
+    "deepseek-ai/DeepSeek-V4.1-Flash-1017@1bae0e1088993b9b82de08f59de5be5a34e42170": {
+      "format": "safetensors · FP8 / MXFP4 experts",
+      "size_gb": 510.311
+    },
+    "primitive-ai/Nanbeige4.3-33B-NVFP4@5ddf8788ed1fa4bec0c0b6fc74ddb0bef7dc4212": {
+      "format": "compressed-tensors · NVFP4",
+      "size_gb": 22.07
+    },
+    "ibm-granite/granite-4.2-30b-nvfp4@bddf34bc6db17e5c4f586e49c1668c8e97610446": {
+      "format": "compressed-tensors · NVFP4",
+      "size_gb": 17.65
+    },
+    "LiquidAI/LFM2.5-24B-A2B-FP8@f54bf39547fd5b7955abb9fe8d1b151e31fbbddb": {
+      "format": "compressed-tensors · FP8 block",
+      "size_gb": 24.75
+    },
+    "Honkware/Nanbeige4.3-33B-exl3-4.0bpw@164ca0ee2b4a2aedb3d43c903cdff53f9688120c": {
+      "format": "EXL3 · 4 bpw, 6-bit head",
+      "size_gb": 17.41
+    },
+    "turboderp/Qwen3.8-27B-exl3@86b95530f9d365d90dd24d01a997a8de0cdf6c55": {
+      "format": "EXL3 · SC 3.00bpw H4",
+      "size_gb": 12.55
     }
   }
 }

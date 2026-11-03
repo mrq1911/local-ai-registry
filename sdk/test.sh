@@ -7,6 +7,25 @@ import json, os, shlex, subprocess, sys
 sys.path.insert(0, "sdk/python")
 import local_ai_registry as L
 cat = json.load(open("dist/catalog.json"))
+# Identical driver names need memory to distinguish 10 and 12 GB variants.
+variants = {"cards": {
+    "rtx-3080-10gb": {"name": "GeForce RTX 3080", "vram_gb": 10},
+    "rtx-3080-12gb": {"name": "GeForce RTX 3080", "vram_gb": 12},
+    "rtx-3080-ti-12gb": {"name": "GeForce RTX 3080 Ti", "vram_gb": 12}}}
+cases = [["NVIDIA GeForce RTX 3080", 10, "rtx-3080-10gb"],
+         ["NVIDIA GeForce RTX 3080", 12, "rtx-3080-12gb"],
+         ["NVIDIA GeForce RTX 3080", 11.8, "rtx-3080-12gb"],
+         ["NVIDIA GeForce RTX 3080 Ti", 12, "rtx-3080-ti-12gb"],
+         ["NVIDIA GeForce RTX 3080", None, "rtx-3080-10gb"]]
+for gpu, memory, expected in cases:
+    assert L.detect(variants, gpu, memory) == expected, (gpu, memory, expected)
+variant_js = subprocess.run(["node", "--input-type=module", "-e", '''
+import {readFileSync} from "node:fs"; import {detect} from "./sdk/js/index.js";
+const {variants, cases} = JSON.parse(readFileSync(0, "utf8"));
+for (const [gpu, memory, expected] of cases) {
+  if (detect(variants, gpu, memory) !== expected) throw new Error(`${gpu}: ${memory}`);
+}
+'''], input=json.dumps({"variants": variants, "cases": cases}), text=True, check=True)
 names = {i: c["name"] for i, c in cat["cards"].items()}
 for i, c in cat["cards"].items():
     got = L.detect(cat, "NVIDIA GeForce " + c["name"] if c["vendor"] == "nvidia" else c["name"], c["vram_gb"])
@@ -58,5 +77,72 @@ argv = subprocess.run(["sh", "-c", script], env={**os.environ, "NODE_RANK": "1",
 assert argv[argv.index("--node-rank") + 1] == "1", argv
 assert "VLLM_HOST_IP=192.0.2.1" in argv, argv
 assert "NOTE=$(printf injected)" in argv and argv[-1] == "$(printf executed)", argv
+# Typed offload commands preserve execution constraints in both SDKs.
+fixture = {"model": "typed-pack", "launch": {"image": "example.invalid/server@sha256:" + "a"*64,
+    "backend": "nvidia", "weights": [{"repo": "fixture/raw", "revision": "b"*40, "at": "/models/raw"}],
+    "port": 8000, "args": ["serve"], "entrypoint": ["python3", "/engine.py"], "shm": "8g",
+    "env": {"MODE": "exact", "NVIDIA_VISIBLE_DEVICES": "all"},
+    "resources": {"memoryBytes": 59055800320, "memorySwapBytes": 59055800320, "memlockUnlimited": True, "ipcLock": True},
+    "prepare": {"at": "/models", "args": ["prepare"], "verifyArgs": ["verify-pack"], "gpu": False, "sizeGb": 117}}}
+py_steps = L.steps(fixture)
+js_steps = json.loads(subprocess.run(["node", "--input-type=module", "-e",
+    'import {readFileSync} from "node:fs"; import {steps} from "./sdk/js/index.js"; console.log(JSON.stringify(steps(JSON.parse(readFileSync(0,"utf8")))));'],
+    input=json.dumps(fixture), capture_output=True, text=True, check=True).stdout)
+assert py_steps == js_steps
+for step in py_steps[1:]:
+    argv = shlex.split(step['code'].split("\n", 1)[-1].replace("\\\n", "")) if step['title'].startswith('Prepare') else shlex.split(step['code'].replace("\\\n", ""))
+    assert "59055800320" in argv and "memlock=-1:-1" in argv and "IPC_LOCK" in argv
+    assert "MODE=exact" in argv and "8g" in argv and "python3" in argv
+    assert argv[argv.index(fixture['launch']['image'])+1:] == ["/engine.py", {"Prepare the model (first start)": "prepare", "Verify the prepared model": "verify-pack", "Start the server": "serve"}[step['title']]]
+    mounts = [argv[i+1] for i, value in enumerate(argv) if value == '-v']
+    assert any(m.endswith(':/models/raw:ro') for m in mounts)
+    if step['title'] != 'Start the server':
+        assert '--gpus' not in argv and '--device' not in argv and 'NVIDIA_VISIBLE_DEVICES=all' not in argv
+    if step['title'] == 'Verify the prepared model':
+        assert all(m.endswith(':ro') for m in mounts)
 print(f"sdk ok: {len(cat['cards'])} cards, {n} recipes, js and python agree")
+# A native binary and its Python adapter both need installation.
+fixture = {"model": "native-fixture", "launch": {"kind": "host", "pip": ["tokenizers==0.22.2"],
+    "install": "https://example.invalid/engine.tar.gz#sha256=" + "a" * 64,
+    "command": ["python3", "adapter.py"], "weights": [], "config": {"at": "adapter.py", "text": "print('ready')"}}}
+py_steps = L.steps(fixture)
+js_steps = json.loads(subprocess.run(["node", "--input-type=module", "-e",
+    'import {readFileSync} from "node:fs"; import {steps} from "./sdk/js/index.js"; console.log(JSON.stringify(steps(JSON.parse(readFileSync(0,"utf8")))));'],
+    input=json.dumps(fixture), capture_output=True, text=True, check=True).stdout)
+assert py_steps == js_steps
+assert "pip install tokenizers==0.22.2" in py_steps[0]["code"]
+assert "shasum -a 256 -c" in py_steps[1]["code"] and "tar xzf" in py_steps[1]["code"]
+assert py_steps[2]["title"] == "Write the launcher"
+# Two weights in one Hugging Face cache mount it once (docker refuses a duplicate mount point).
+fixture = {"model": "hub-pair", "launch": {"image": "example.invalid/server:fixture", "backend": "cpu", "port": 8000, "args": [],
+    "weights": [{"repo": "fixture/model", "revision": "b" * 40, "at": "/root/.cache/huggingface", "layout": "hub"},
+                {"repo": "fixture/draft", "revision": "c" * 40, "at": "/root/.cache/huggingface", "layout": "hub"}]}}
+py_steps = L.steps(fixture)
+js_steps = json.loads(subprocess.run(["node", "--input-type=module", "-e",
+    'import {readFileSync} from "node:fs"; import {steps} from "./sdk/js/index.js"; console.log(JSON.stringify(steps(JSON.parse(readFileSync(0,"utf8")))));'],
+    input=json.dumps(fixture), capture_output=True, text=True, check=True).stdout)
+assert py_steps == js_steps
+assert py_steps[-1]["code"].count("/root/.cache/huggingface") == 1, py_steps[-1]["code"]
 PY
+# The JS catalog is cached per URL, one shared fetch while it is in flight: a failed fetch is retried, each URL keeps its own.
+node --input-type=module -e '
+import { catalog } from "./sdk/js/index.js";
+const calls = [];
+globalThis.fetch = async (url) => {
+  calls.push(url);
+  if (calls.length === 1) throw new Error("offline");
+  if (calls.length === 2) return { ok: false, status: 503 };
+  return { ok: true, json: async () => ({ url }) };
+};
+const fails = async () => { try { await catalog(); } catch { return true; } return false; };
+if (!(await fails()) || !(await fails())) throw new Error("a failed fetch should reject");
+if ((await catalog()).url === undefined || calls.length !== 3) throw new Error("a failed fetch is cached");
+await catalog();
+if (calls.length !== 3) throw new Error("a loaded catalog is fetched again");
+const other = "https://example.invalid/other.json";
+if ((await catalog(other)).url !== other) throw new Error("another URL returns the first catalog");
+if ((await catalog()).url === other || (await catalog(other)).url !== other || calls.length !== 4) throw new Error("the cache keeps only the latest URL");
+const same = await Promise.all([catalog("https://example.invalid/third.json"), catalog("https://example.invalid/third.json")]);
+if (same[0] !== same[1] || calls.length !== 5) throw new Error("concurrent calls for one URL should share one fetch");
+'
+echo "sdk ok: catalog cache retries failures and keys by URL"

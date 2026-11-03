@@ -25,18 +25,23 @@ def label(hw, n, machines):
 
 def build(today=None):
     today = today or dt.date.today()
-    meta = json.loads((ROOT / "registry" / "models.json").read_text())
+    meta = json.loads((ROOT / "registry" / "models.json").read_text(encoding="utf-8"))
     fam = {f: i for i, f in enumerate(meta["families"])}
-    prefer = json.loads((lab.REG / "prefer.json").read_text()) if (lab.REG / "prefer.json").exists() else {}
+    prefer = json.loads((lab.REG / "prefer.json").read_text(encoding="utf-8")) if (lab.REG / "prefer.json").exists() else {}
     cards, recipes = {}, {}
     for f in sorted(lab.RECIPES.rglob("*.json")):
-        r = json.loads(f.read_text())
+        r = json.loads(f.read_text(encoding="utf-8"))
+        if r["proof"][0].get("withdrawn"):
+            continue  # retain historical proofs in source, but do not offer a withdrawn launch
         m = meta["models"].get(r["model"])
         old = 2 if r["proof"][0].get("reported") else 1 if r["proof"][0].get("legacy") else 0
         if old != 1 and (not m or m["family"] not in fam or (today - dt.date.fromisoformat(m["released"])).days > meta["max_age_days"]):
             continue
         key = str(f.relative_to(lab.RECIPES).with_suffix(""))
-        recipes[key] = {**r, "launch": lab.render(r), "profile": str(lab.profile_file(r["engine"].split("@")[0] + ".json").relative_to(ROOT))}
+        launch = lab.render(r)
+        if launch.get("companion"):
+            continue  # a second container on a card of another kind: a registry candidate, never a one-card recipe
+        recipes[key] = {**r, "launch": launch, "profile": str(lab.profile_file(r["engine"].split("@")[0] + ".json").relative_to(ROOT))}
         # a lab recipe ranks above a legacy one, and a legacy one above one reported by its publisher
         mf = (fam.get(m["family"], len(fam)), -dt.date.fromisoformat(m["released"]).toordinal()) if m else (len(fam), 0)
         gguf = r["engine"].startswith("llama") or "gguf" in r["weights"].lower()  # GGUF only where nothing else runs yet
@@ -48,7 +53,6 @@ def build(today=None):
         demoted = (won and kind != won and kind in ("sglang", "tabbyapi", "exllamav3")) or (not won and r["engine"].startswith("sglang-exl3@"))
         # a recipe that needs more of the host than the card (RAM, disk: `needs`) never leads a card: it follows the ones
         # every machine with the card can run, and the plugin offers it only where the host has what it needs
-        launch = recipes[key]["launch"]
         rank = (gguf, bool(launch.get("needs")), old, *mf, bool(demoted), not exl3)
         setup = (launch.get("cards") or 1, launch.get("machines") or 1)
         cards.setdefault(r["card"], {}).setdefault(setup, []).append((*rank, -(r["proof"][0]["tps"] or 0), r["model"], key))
@@ -78,9 +82,9 @@ def build(today=None):
 if __name__ == "__main__":
     text = build()
     if "--check" in sys.argv:
-        ok = OUT.exists() and OUT.read_text() == text
+        ok = OUT.exists() and OUT.read_text(encoding="utf-8") == text
         print("dist/catalog.json is current" if ok else "dist/catalog.json is stale: run lab/catalog.py")
         sys.exit(0 if ok else 1)
     OUT.parent.mkdir(exist_ok=True)
-    OUT.write_text(text)
+    OUT.write_text(text, encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}: {len(text)} bytes")

@@ -1,0 +1,74 @@
+{
+ "recipe": {
+  "model": "qwen3.5-9b",
+  "weights": "TheMelonGod/Qwen3.5-9B-exl3@d6da14ea3d914a7571f8880775749404087c72bd",
+  "engine": "tabbyapi-exl3@0f83e6198dc3",
+  "set": {
+   "ctx": 262144,
+   "seqs": 2,
+   "draft": "mtp"
+  },
+  "card": "rtx-5090-laptop-24gb"
+ },
+ "where": {
+  "on": "owner",
+  "gpu": "NVIDIA GeForce RTX 5090 Laptop GPU"
+ },
+ "passed": true,
+ "proof": {
+  "at": "2026-10-12",
+  "on": "owner",
+  "gpu": "NVIDIA GeForce RTX 5090 Laptop GPU",
+  "launch_sha256": "d540cbb4e14b3ac178f983a02fc59e09d2f6c336196aecaaac2311fbcf5969e6",
+  "gates": "load chat reasoning tools context speed",
+  "tps": 107.1,
+  "prefill": 1426,
+  "served": "Qwen3.5-9B-exl3-d6da14ea"
+ },
+ "evidence": {
+  "ok": {
+   "load": true,
+   "chat": true,
+   "reasoning": true,
+   "tools": true,
+   "context": true,
+   "speed": true
+  },
+  "chat": {
+   "content": "\n\nRed, Yellow, Blue",
+   "finish": "stop"
+  },
+  "reasoning": {
+   "thinking_chars": 609,
+   "content": "\n\n391"
+  },
+  "tools": {
+   "call": [
+    {
+     "id": "call_8b8784e48d694bf69d42c89a",
+     "function": {
+      "name": "get_weather",
+      "arguments": "{\"city\": \"Paris\"}"
+     },
+     "type": "function",
+     "index": 0
+    }
+   ],
+   "reply": "\n\nThe current weather in Paris is overcast with a temperature of 17°C.",
+   "finish": "stop",
+   "calls_again": 0,
+   "thinking_chars": 171
+  },
+  "context": {
+   "prompt_tokens": 213560,
+   "seconds": 149.8,
+   "content": "\n\n58213"
+  },
+  "speed": {
+   "window_s": 30,
+   "tokens_total": 3892,
+   "seconds_total": 33.9
+  }
+ },
+ "launch_config_sha256": "f5fa631a837db3fe39df76815bbd5f36e2f2d8df40f4b9e86725537b58a1f936"
+}
