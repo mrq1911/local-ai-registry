@@ -41,6 +41,7 @@ REG = ROOT / "registry"
 
 # registry hardware id -> provider GPU names. vast names use underscores for spaces in queries.
 GPUS = {
+    "gtx-1080-ti-11gb": {"vast": "GTX 1080 Ti"},
     "rtx-3060-12gb": {"runpod": ["NVIDIA GeForce RTX 3060"], "vast": "RTX 3060"},
     "rtx-3060-ti-8gb": {"runpod": ["NVIDIA GeForce RTX 3060 Ti"], "vast": "RTX 3060 Ti"},
     "rtx-4060-8gb": {"runpod": ["NVIDIA GeForce RTX 4060"], "vast": "RTX 4060"},
@@ -86,7 +87,7 @@ def log(msg):
 def http_probe(url, timeout=10):
     """-> 'ok' | 'refused' (host reachable, server not listening yet) | 'timeout' (port unreachable) | 'http-<code>'."""
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "local-ai-lab/1"}), timeout=timeout) as response:
             return "ok" if response.status == 200 else f"http-{response.status}"
     except urllib.error.HTTPError as error:
         return f"http-{error.code}"
@@ -114,12 +115,12 @@ class Spec:
         self.env = dict(contract.get("environment") or {})
         token_file = Path.home() / ".cache" / "huggingface" / "token"
         if "HF_TOKEN" not in self.env and token_file.exists():
-            self.env["HF_TOKEN"] = token_file.read_text().strip()
-        hw = json.loads((REG / "hardware" / f"{recipe['hardware_id']}.json").read_text())
+            self.env["HF_TOKEN"] = token_file.read_text(encoding="utf-8").strip()
+        hw = json.loads((REG / "hardware" / f"{recipe['hardware_id']}.json").read_text(encoding="utf-8"))
         self.vram_gb = (hw.get("memory") or {}).get("vram_gb") or 0
         self.gpu_override = args.gpu
         self.hardware_id = recipe["hardware_id"]
-        self.instance = json.loads((REG / "model-instance" / f"{recipe['model_instance_id']}.json").read_text())
+        self.instance = json.loads((REG / "model-instance" / f"{recipe['model_instance_id']}.json").read_text(encoding="utf-8"))
         self.provision = self.materialize_plan()
 
     def materialize_plan(self):
@@ -135,7 +136,7 @@ class Spec:
         for mount in self.contract.get("mounts") or []:
             source = mount.get("source") or ""
             if source.startswith("asset/"):
-                text = (REG / source).read_text()
+                text = (REG / source).read_text(encoding="utf-8")
                 match = re.search(r"^\s*model_name:\s*(\S+)", text, re.MULTILINE)
                 if match:
                     subdir = match.group(1).strip("\"'")
@@ -150,7 +151,8 @@ class Spec:
                 target = mount["target"].rstrip("/")
                 if not provision and subdir:
                     target = f"{target}/{subdir}"
-                steps.append(("weights", target, (repo, revision)))
+                files = mount.get("files") or provision.get("files")
+                steps.append(("weights", target, (repo, revision, files)))
         return steps
 
     def onstart_script(self):
@@ -164,11 +166,32 @@ class Spec:
                 encoded = base64.b64encode(payload.encode()).decode()
                 parts.append(f"mkdir -p {shlex.quote(os.path.dirname(target))} && printf %s {encoded} | base64 -d > {shlex.quote(target)}")
             else:
-                repo, revision = payload
-                code = f"from huggingface_hub import snapshot_download as d; d({repo!r}, revision={revision!r}, local_dir={target!r})"
+                repo, revision, files = (list(payload) + [None])[:3]  # a 2-tuple from an older caller means the whole revision
+                patterns = [p.strip() for p in files.split(",") if p.strip()] if isinstance(files, str) else list(files or [])
+                allow = f", allow_patterns={patterns!r}" if patterns else ""
+                code = f"from huggingface_hub import snapshot_download as d; d({repo!r}, revision={revision!r}, local_dir={target!r}{allow})"
+                # some engine images (the official llama.cpp CUDA builds) ship python3 with no pip, so
+                # `pip install huggingface_hub` cannot run; the download then falls back to curl (present in the
+                # image), which retries a dropped transfer and resumes it instead of starting over
+                fallback = ("import fnmatch,json,os,subprocess,urllib.request\n"
+                            f"repo,rev,target={repo!r},{revision!r},{target!r}\n"
+                            f"patterns={patterns!r}\n"
+                            "os.makedirs(target,exist_ok=True)\n"
+                            "tree=json.load(urllib.request.urlopen('https://huggingface.co/api/models/%s/tree/%s'%(repo,rev)))\n"
+                            "files=[s for s in tree if s.get('type')=='file' and (not patterns or any(fnmatch.fnmatch(s['path'],p) for p in patterns))]\n"
+                            "if patterns and not files: raise SystemExit('nothing in the revision matches %r' % (patterns,))\n"
+                            "for s in files:\n"
+                            " path=s['path'];dest=os.path.join(target,path)\n"
+                            " if os.path.exists(dest) and os.path.getsize(dest)==s.get('size'): continue\n"
+                            " print('downloading',path,s.get('size'),'bytes',flush=True)\n"
+                            " subprocess.check_call(['curl','-L','--fail','--retry','8','--retry-all-errors','--retry-delay','5','-C','-','--create-dirs','-o',dest,'https://huggingface.co/%s/resolve/%s/%s'%(repo,rev,path)])\n"
+                            " if s.get('size') is not None and os.path.getsize(dest)!=s['size']:\n"
+                            "  raise SystemExit('short download: '+path)\n")
                 parts.append(f"mkdir -p {shlex.quote(target)}")
-                parts.append(f"({shlex.join([python, '-c', 'import huggingface_hub'])} || {shlex.join([python, '-m', 'pip', 'install', '-q', 'huggingface_hub'])})")
-                parts.append(shlex.join([python, "-c", code]))
+                hub = (f"({shlex.join([python, '-c', 'import huggingface_hub'])} || "
+                       f"{shlex.join([python, '-m', 'pip', 'install', '-q', 'huggingface_hub'])}) && "
+                       f"{shlex.join([python, '-c', code])}")
+                parts.append(f"({hub} || {shlex.join([python, '-c', fallback])})")
         command = [self.entrypoint] if self.entrypoint else []
         parts.append("exec " + shlex.join(command + self.arguments))
         return " && ".join(parts)
@@ -182,6 +205,7 @@ class Spec:
 class RunPod:
     API = "https://rest.runpod.io/v1"
     name = "runpod"
+    start_grace = 1800  # a pod has no uptime until its image is pulled, and a big image can take 15 min
 
     def __init__(self, args):
         self.cloud = args.cloud
@@ -193,7 +217,7 @@ class RunPod:
             return key
         cfg = Path.home() / ".runpod" / "config.toml"
         if cfg.exists():
-            match = re.search(r'apikey\s*=\s*"([^"]+)"', cfg.read_text(), re.IGNORECASE)
+            match = re.search(r'apikey\s*=\s*"([^"]+)"', cfg.read_text(encoding="utf-8"), re.IGNORECASE)
             if match:
                 return match.group(1)
         raise SystemExit("no RunPod API key: set RUNPOD_API_KEY or run `runpodctl config`")
@@ -229,15 +253,21 @@ class RunPod:
             "containerDiskInGb": spec.disk, "volumeInGb": 0, "gpuTypeIds": self.gpu_ids(spec),
             "gpuTypePriority": "custom", "gpuCount": 1, "interruptible": False,
         }
+        if spec.provision:
+            if not spec.entrypoint:
+                raise SystemExit("in-container provisioning needs an explicit entrypoint in the contract")
+            body["dockerEntrypoint"], body["dockerStartCmd"] = ["/bin/sh", "-c"], [spec.onstart_script()]
         for cloud in dict.fromkeys([self.cloud, "SECURE", "COMMUNITY"]):
+            if cloud in exclude:  # a pod there never started: try the other cloud
+                continue
             body["cloudType"] = cloud
             try:
                 pod = self.call("POST", "/pods", body)
                 self.cloud = cloud
-                return {"id": pod["id"], "cost": pod.get("costPerHr"), "gpu": self.gpu_ids(spec)[0],
+                return {"id": pod["id"], "cost": pod.get("costPerHr"), "gpu": self.gpu_ids(spec)[0], "cloud": cloud,
                         "endpoint": f"https://{pod['id']}-{spec.port}.proxy.runpod.net"}
             except SystemExit as error:
-                if "no instances currently available" not in str(error):
+                if not re.search(r"instances (currently )?available", str(error)):
                     raise
                 log(f"no {cloud} instances for {self.gpu_ids(spec)[0]} right now")
         raise SystemExit(f"no RunPod instances available for {self.gpu_ids(spec)[0]}; try later or lower --disk")
@@ -247,9 +277,20 @@ class RunPod:
         status = state.get("desiredStatus")
         if status in ("EXITED", "TERMINATED"):
             raise SystemExit(f"pod {status} before the server became healthy")
-        started = bool((state.get("runtime") or {}).get("uptimeInSeconds"))
+        started = bool(self.uptime(handle["id"]))
         handle["gpu"] = (state.get("machine") or {}).get("gpuTypeId") or handle["gpu"]
         return started, f"pod {status}"
+
+    def uptime(self, pod_id):  # a REST pod has no runtime field; GraphQL has it
+        query = '{ pod(input: {podId: "%s"}) { runtime { uptimeInSeconds } } }' % pod_id
+        request = urllib.request.Request("https://api.runpod.io/graphql", data=json.dumps({"query": query}).encode(), headers={
+            "Authorization": f"Bearer {self.key()}", "Content-Type": "application/json", "User-Agent": "local-ai-lab/1"})
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                pod = (json.loads(response.read()).get("data") or {}).get("pod") or {}
+        except (OSError, ValueError):
+            return None
+        return (pod.get("runtime") or {}).get("uptimeInSeconds")
 
     def destroy(self, handle):
         self.call("DELETE", f"/pods/{handle['id']}")
@@ -266,6 +307,12 @@ class Vast:
         self.verified = "any" if getattr(args, "vast_any_host", False) else "true"  # unverified hosts: for cards verified hosts never offer
         self.min_cuda = args.vast_min_cuda
         self.max_price = args.vast_max_price
+        # an offload recipe keeps experts in host RAM and reads tables from NVMe: rent only a host that has them
+        self.min_ram = getattr(args, "vast_min_ram", 0) or 0
+        self.min_disk_bw = getattr(args, "vast_min_disk_bw", 0) or 0
+        self.min_pcie = getattr(args, "vast_min_pcie", 0) or 0
+        # hosts bill the download per GB; at $0.04/GB a 70 GB image and weights pull costs more than hours of compute
+        self.max_inet_cost = getattr(args, "vast_max_inet_cost", 0.02)
 
     @staticmethod
     def cli(*argv, timeout=120):
@@ -312,15 +359,22 @@ class Vast:
         query = (f"num_gpus=1 rentable=true verified={self.verified} gpu_name={name} gpu_ram>={lo} "  # the <= side is applied below: the server reads it in MB
                  f"inet_down>={self.min_inet} disk_space>={spec.disk + 5} reliability>0.9 cuda_max_good>={self.min_cuda} "
                  f"dph_total<={self.max_price} "  # the campaign ceiling; a card with no offer under it is reported, never rented above it
-                 f"geolocation notin [CN]")  # hosts that cannot reach Hugging Face never finish the weights download
+                 + (f"cpu_ram>={self.min_ram} " if self.min_ram else "")  # GB, like gpu_ram
+                 + (f"disk_bw>={self.min_disk_bw} " if self.min_disk_bw else "")  # MB/s
+                 + (f"pcie_bw>={self.min_pcie} " if self.min_pcie else "")  # GB/s host-to-device: offloaded experts cross it every token
+                 + (f"inet_down_cost<={self.max_inet_cost} " if self.max_inet_cost else "")  # $/GB downloaded
+                 + "geolocation notin [CN]")  # hosts that cannot reach Hugging Face never finish the weights download
         offers = self.cli("search", "offers", query, "-o", "dph_total")
         offers = [o for o in offers if o.get("id") not in exclude and o.get("machine_id") not in exclude
                   and (o.get("gpu_ram") or 0) <= hi * 1024]  # results report MB; keep the 8 GB variant off a 16 GB card and vice versa
         if not offers:
             raise SystemExit(f"no Vast offers for {query}")
-        # cheapest hosts are often the slowest pullers: within 1.5x of the best price, take the fastest downlink first
-        cap = (offers[0].get("dph_total") or 0) * 1.5
-        cheap = [o for o in offers if (o.get("dph_total") or 0) <= cap]
+        # a run's cost: about two hours of compute plus the pull (image and weights, at most the disk we ask for)
+        est = lambda o: 2 * (o.get("dph_total") or 0) + (o.get("inet_down_cost") or 0) * spec.disk
+        offers.sort(key=est)
+        # cheapest hosts are often the slowest pullers: within 1.5x of the best estimate, take the fastest downlink first
+        cap = est(offers[0]) * 1.5
+        cheap = [o for o in offers if est(o) <= cap]
         cheap.sort(key=lambda o: -(o.get("inet_down") or 0))
         return cheap + [o for o in offers if o not in cheap]
 
@@ -395,7 +449,7 @@ def load_recipe(recipe_id, revalidate=False):
     path = REG / "recipe" / f"{recipe_id}.json"
     if not path.exists():
         raise SystemExit(f"no recipe {recipe_id}")
-    recipe = json.loads(path.read_text())
+    recipe = json.loads(path.read_text(encoding="utf-8"))
     if recipe.get("status") != "candidate" and not revalidate:
         raise SystemExit(f"only candidates can be validated; {recipe_id} is {recipe.get('status')} (pass --revalidate)")
     launch = recipe.get("launch") or {}
@@ -416,7 +470,7 @@ def strip_host_ipc(path, recipe):
             del block["ipc"]
             changed = True
     if changed:
-        path.write_text(json.dumps(recipe, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+        path.write_text(json.dumps(recipe, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
         log("dropped ipc=host from the contract: validated without it")
 
 
@@ -483,9 +537,9 @@ def run_once(provider, spec, path, recipe, args, attempt, exclude):
         if result.returncode != 0:
             raise SystemExit("acceptance failed; recipe stays candidate")
         if args.recommend:
-            promoted = json.loads(path.read_text())
+            promoted = json.loads(path.read_text(encoding="utf-8"))
             promoted["recommended"] = True
-            path.write_text(json.dumps(promoted, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+            path.write_text(json.dumps(promoted, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
         log(f"PROMOTED {recipe['id']} (validated on {provider.name} {handle.get('gpu')}){' and flagged recommended' if args.recommend else ''}")
         return 0
     finally:

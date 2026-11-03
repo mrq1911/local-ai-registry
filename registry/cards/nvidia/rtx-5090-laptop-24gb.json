@@ -1,0 +1,16 @@
+{
+  "id": "rtx-5090-laptop-24gb",
+  "name": "NVIDIA GeForce RTX 5090 Laptop GPU",
+  "vendor": "nvidia",
+  "backend": "nvidia",
+  "vram_gb": 24,
+  "bandwidth_gb_s": 896,
+  "match": {
+    "backend": "nvidia",
+    "name": "NVIDIA GeForce RTX 5090 Laptop GPU",
+    "names": [
+      "rtx5090laptopgpu"
+    ],
+    "vramGb": 24
+  }
+}

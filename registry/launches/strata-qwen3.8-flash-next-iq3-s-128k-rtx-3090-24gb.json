@@ -1,0 +1,42 @@
+{
+  "id": "strata-qwen3.8-flash-next-iq3-s-128k-rtx-3090-24gb",
+  "kind": "host",
+  "engine": "strata",
+  "about": "Qwen3.8-Flash-Next (ISTA-DASLab GSQ-RCO IQ3_S: 3.5-bit i-quant, all 512 experts) on one 24 GB card with Strata 0.1.40.3 (github.com/Niko1221/Strata): a VRAM expert cache auto-sized from free VRAM, the experts the GPU does not hold kept in RAM (low-RAM mode off, no expert reads from the SSD while serving), MTP speculative decoding (4 drafts) from the original checkpoint's MTP layer, int8 KV with the first 32,768 tokens resident on the GPU, 128K window.",
+  "command": [
+    ".venv/bin/python",
+    "serve/server.py",
+    "--engine",
+    "strata",
+    "--config",
+    "strata-iq3_s.json",
+    "--port",
+    "8080"
+  ],
+  "install": "git clone https://github.com/Niko1221/Strata && git -C Strata checkout d5ea7133741e67743c0e886bb426c0ce8d69cf6c && cd Strata && ./setup.sh --family qwen --model IQ3_S --context 131072 --vision no --kv int8 --low-ram off --kv-streaming on --build --no-start --yes (compiles engine 0.1.40.3 for sm_86; our build of this commit, from Strata's own Dockerfile with CUDA 13.0: engine/strata sha256 7f532b61736a7ba1e3042c59eecbf7471e4b2c1aebb33f70e3f38be400189eaf; setup downloads the pinned GGUF shards, builds the pack and fetches the MTP layer, and writes strata-iq3_s.json)",
+  "env": {},
+  "port": 8080,
+  "weights": [
+    {
+      "repo": "ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF",
+      "revision": "ed59f92082b1e93c0e96d60a8b11aab089b52f09",
+      "at": "../Strata-data/models/IQ3_S",
+      "layout": "dir",
+      "files": [
+        "IQ3_S/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+        "IQ3_S/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00002-of-00002.gguf"
+      ]
+    }
+  ],
+  "ctx": 131072,
+  "seqs": 1,
+  "vision": false,
+  "backend": "nvidia",
+  "source": "https://github.com/Niko1221/Strata/tree/d5ea7133741e67743c0e886bb426c0ce8d69cf6c",
+  "needs": {
+    "host_ram_gb": 57.0,
+    "disk_gb": 92.1,
+    "fast_storage": "nvme"
+  },
+  "setup": "NEEDS: one 24 GB NVIDIA card (sm_86 build), 64 GB RAM or more (Strata's setup asks 62 GB for IQ3_S), ~92 GB on a local NVMe SSD (83.6 GB GGUF + 1.5 GB pack + 6.9 GB MTP layer). Low-RAM mode off: at start Strata copies the experts its VRAM cache does not hold into a host arena (48.8 GiB anonymous memory during decode); the GGUF stays mapped through the OS file cache (~55 GiB once warm, which MemAvailable counts as available). Strata serves one request at a time. KV: int8, the first 32,768 tokens on the GPU and the rest streamed from RAM (--kv-resident 32768; ~1.8 GB of RAM at 128K). Measured on an RTX 3090 (PCIe 4.0 x8, headless, Ryzen 9 5950X, 128 GB DDR4, NVMe): VRAM 23.7 GiB peak, ~15 CPU cores busy during decode. host_ram_gb is the largest MemAvailable drop from before the start to the end of the lab gates."
+}

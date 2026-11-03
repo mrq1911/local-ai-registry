@@ -1,0 +1,55 @@
+{
+  "id": "llama.cpp-welp-35b-a3b-autofit-256k-rtx-5060-ti-16gb",
+  "engine": "llama.cpp",
+  "about": "Welp-35B-A3B (Qwen3.6-35B-A3B in 13.2 GB) at the full 262k context with a q4_0 KV cache on one RTX 5060 Ti 16GB: the same image and cache settings as llama.cpp-welp-35b-a3b-262k, but llama.cpp's auto-fit (--fit-target 1024) keeps attention, the KV cache and as many experts as fit on the GPU and leaves the rest in host RAM, so it also starts when part of the card is taken. --cache-ram 0 turns off the host prompt cache. Measured on an RTX 5060 Ti 16GB (driver 610.62), 63 GB RAM, Windows 11 + Docker Desktop: another process held about 9.9 GB of VRAM (its work suspended during the run), so auto-fit put about 5.2 GB of this model on the GPU; 61.2 tok/s decode, 751 tok/s prefill over a 213,570-token prompt.",
+  "image": "ghcr.io/ggml-org/llama.cpp:server-cuda12-b11146@sha256:52192a23c7b258044463aebba78826cdff39a7393b713edc313324b343a7b836",
+  "backend": "nvidia",
+  "port": 8080,
+  "entrypoint": "/app/llama-server",
+  "args": [
+    "--model",
+    "/models/Welp-35B-A3B.gguf",
+    "--fit-target",
+    "1024",
+    "--flash-attn",
+    "on",
+    "--ctx-size",
+    "262144",
+    "--cache-type-k",
+    "q4_0",
+    "--cache-type-v",
+    "q4_0",
+    "--ubatch-size",
+    "256",
+    "--parallel",
+    "1",
+    "--cache-ram",
+    "0",
+    "--metrics",
+    "--jinja",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8080"
+  ],
+  "env": {
+    "CUDA_DEVICE_ORDER": "PCI_BUS_ID"
+  },
+  "shm": "16g",
+  "weights": [
+    {
+      "repo": "quaedra/Welp-35B-A3B-GGUF",
+      "revision": "3e4a3adbda8df07d2889978170d9955c2e59fb7a",
+      "at": "/models",
+      "layout": "dir",
+      "files": [
+        "Welp-35B-A3B.gguf"
+      ]
+    }
+  ],
+  "config": null,
+  "ctx": 262144,
+  "seqs": 1,
+  "vision": false,
+  "cards": 1
+}

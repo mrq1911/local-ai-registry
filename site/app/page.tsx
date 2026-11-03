@@ -1,51 +1,94 @@
-import Link from "next/link";
-import Picker from "@/components/Picker";
-import Logo from "@/components/Logo";
-import { cards, picks, lead, model, format, ctxLabel, stats, VENDOR, short, setupTag, bare, memoryLabel } from "@/lib/registry";
+import type { Metadata } from "next";
+import Copy from "@/components/Copy";
+import Dots from "@/components/Dots";
+import Find, { type Item } from "@/components/Find";
+import Seen from "@/components/Seen";
+import { PLUGIN, REGISTRY, SiteFoot, SiteNav } from "@/components/SiteNav";
+import copy from "@/lib/landing/copy.json";
+import { GPU, NET, TERMINAL } from "@/lib/landing/pictures";
+import { cards, models, recipes, short } from "@/lib/registry";
+import s from "./landing.module.css";
 
-export default function Home() {
-  const vendors = ["nvidia", "amd", "intel", "apple", "cpu"].filter((v) => cards.some((c) => c.vendor === v) || bare.some((h) => h.vendor === v));
+// The landing page: the promise, the hands, three dot pictures saying what it is, then every GPU and model, searchable.
+// Every word comes from lib/landing/copy.json; the details live in /docs/ and the videos in /videos/.
+const INSTALL = `omarchy plugin add ${PLUGIN} --enable`;
+
+// The cards people most often run models on at home, first; every other card follows by how many recipes it has.
+const COMMON = ["rtx-3090-24gb", "rtx-4090-24gb", "rtx-5090-32gb", "rtx-3060-12gb", "rtx-4060-ti-16gb", "rtx-5070-12gb", "rtx-4070-super-12gb", "rtx-5060-ti-16gb",
+  "rtx-4080-super-16gb", "rtx-5080-16gb", "rx-7900-xtx-24gb", "rtx-4060-8gb", "rtx-3080-10gb", "rtx-3070-8gb", "dgx-spark-gb10-128gb", "apple-m4-max-128gb", "x86-64-avx2-cpu"];
+
+export const metadata: Metadata = {
+  title: { absolute: `${copy.word}: ${copy.sHead}` },
+  description: copy.sSub ?? undefined,
+};
+
+const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
+function gpuItems(): Item[] {
+  const n = (id: string) => recipes.filter((r) => r.card === id).length;
+  const rank = (id: string) => (COMMON.includes(id) ? COMMON.indexOf(id) : COMMON.length);
+  return [...cards]
+    .sort((a, b) => rank(a.id) - rank(b.id) || n(b.id) - n(a.id) || a.name.localeCompare(b.name))
+    .map((c) => ({ name: short(c.name), meta: `${c.vendor === "cpu" ? "RAM" : `${c.vram_gb} GB`} · ${count(n(c.id), "recipe")}`, href: `/gpu/${c.id}/`, terms: `${c.name} ${c.id} ${c.vendor} ${c.vram_gb}gb`.toLowerCase() }));
+}
+
+function modelItems(): Item[] {
+  return Object.entries(models)
+    .map(([id, m]) => ({ id, m, n: new Set(recipes.filter((r) => r.model === id).map((r) => r.card)).size }))
+    .filter((x) => x.n)
+    .sort((a, b) => b.n - a.n || a.m.name.localeCompare(b.m.name))
+    .map(({ id, m, n }) => ({ name: m.name, meta: count(n, "GPU"), href: `/models/${id}/`, terms: `${m.name} ${id} ${m.family}`.toLowerCase() }));
+}
+
+export default function Landing() {
+  const C = copy as Record<string, string | null>;
+  const what = [GPU, NET, TERMINAL].map((art, i) => ({ art, t: C[`w${i + 1}t`], d: C[`w${i + 1}d`] }));
+
   return (
-    <main>
-      <div className="hero">
-        <div className="label" style={{ marginBottom: 18 }}>Local AI registry</div>
-        <h1>The model to run on your GPU or CPU, and exactly how.</h1>
-        <p>Pick your hardware. You get the three best models it can run, how fast each one goes, and the command that starts it. A tested recipe was run on the card and passed six checks: it loads, answers, thinks, calls tools, holds its context window and keeps pace. Below the top three, each card lists every other recipe we know of, including ones published by others, marked as reported until our checks run.</p>
-        <Picker options={[...cards, ...bare].map((c) => ({ id: c.id, name: short(c.name), vendor: c.vendor, vram: c.vram_gb }))} />
-        <div className="facts">
-          <span><b>{stats.hardware}</b> GPUs and chips</span><span><b>{stats.gpus}</b> with recipes</span><span><b>{stats.recipes}</b> recipes</span>
-          <span><b>{stats.tested}</b> tested on the real card</span><span><b>{stats.reported}</b> reported</span>
+    <div className={s.page}>
+      <SiteNav />
+
+      <section className={s.hero}>
+        <h1>{copy.sHead}</h1>
+        {copy.sSub && <p>{copy.sSub}</p>}
+        <div className={s.cmd}>
+          <span className={s.prompt}>$</span>
+          <code title={INSTALL}>{copy.sCmd}</code>
+          <Copy text={INSTALL} event="install_copied" props={{ from: "landing" }} />
         </div>
+      </section>
+
+      <div className={s.art}>
+        <img src="/landing/hands.svg" alt="Two hands drawn in dots, reaching for each other" />
+        {copy.credit && <span className={s.credit}>{copy.credit}</span>}
       </div>
 
-      <section id="gpus">
-        {vendors.map((v) => (
-          <div key={v} style={{ marginTop: v === "nvidia" ? 0 : 40 }}>
-            <span className="label" style={{ display: "block", marginBottom: 14 }}>{VENDOR[v]}</span>
-            <div className="gpus">
-              {cards.filter((c) => c.vendor === v).map((c) => {
-                const top = picks(lead(c))[0];
-                const m = top && model(top);
-                const tps = top?.proof[0].tps ?? 0;
-                return (
-                  <Link key={c.id} href={`/gpu/${c.id}`} className="row">
-                    <span className="gpu-name">{short(c.name)}{!c.picks.length && <span className="faint"> · {setupTag(c.setups[0])}</span>}{c.setups.length > 1 && <span className="faint"> · also {c.setups.slice(1).map(setupTag).join(", ")}</span>}</span>
-                    <span className="gpu-mem dim">{memoryLabel(c)}</span>
-                    {top && <span className="gpu-model"><Logo family={m.logo ?? m.family} size={16} />{m.name}<span className="faint">{format(top)}</span></span>}
-                    <span className="gpu-speed"><span className="bar"><i style={{ width: `${Math.min(100, tps / 1.8)}%` }} /></span><span>{tps ? Math.round(tps) : "–"}<span className="faint"> tok/s</span></span></span>
-                    <span className="dim">›</span>
-                  </Link>
-                );
-              })}
+      <section id="what" className={s.section}>
+        <div className={s.flow}>
+          {what.map((w, i) => (
+            <div key={i} className={s.flowItem}>
+              <div className={s.pic}><Dots art={w.art} label={w.t ?? undefined} /></div>
+              {i < what.length - 1 && <span className={s.wire} aria-hidden="true"><i /></span>}
+              <h3>{w.t}</h3>{w.d && <p>{w.d}</p>}
             </div>
-            {bare.some((h) => h.vendor === v) && (
-              <p className="dim" style={{ fontSize: 13, marginTop: 12, lineHeight: 1.8 }}>
-                No recipe yet: {bare.filter((h) => h.vendor === v).map((h, i) => <span key={h.id}>{i ? " · " : ""}<Link href={`/gpu/${h.id}`}>{short(h.name)}</Link></span>)}
-              </p>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
-    </main>
+
+      <section id="find" className={`${s.section} ${s.finds}`}>
+        <Find title={C.fGpus ?? "GPUs"} placeholder={C.fGpusQ ?? ""} items={gpuItems()} all={{ label: C.fGpusAll ?? "", href: "/hardware/" }} />
+        <Find title={C.fModels ?? "Models"} placeholder={C.fModelsQ ?? ""} items={modelItems()} all={{ label: C.fModelsAll ?? "", href: "/models/" }} />
+      </section>
+
+      {C.cText && (
+        <section id="contribute" className={`${s.section} ${s.follow}`}>
+          <p>{C.cText}</p>
+          <a href={C.cUrl ?? REGISTRY} className={s.btn}>{C.cBtn} →</a>
+        </section>
+      )}
+
+      <SiteFoot />
+      <Seen />
+    </div>
   );
 }
