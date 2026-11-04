@@ -1,0 +1,40 @@
+{
+    "id": "tabbyapi-muse-glimmer-30b-sc-4.00bpw-h5-dflash-256k-rtx-3090-24gb",
+    "engine": "tabbyapi",
+    "about": "Muse Glimmer 30B EXL3 SC 4.00 bpw H5 with Meta's assistant drafter (DFlash, 4.00 bpw EXL3) for speculative decoding on TabbyAPI, 256K window on one 24 GB card",
+    "image": "ghcr.io/0xsero/tabbyapi-exl3@sha256:0f83e6198dc3be2561652d8df2525a7d1a69733e12fc8e25cbc5bc319a8a3ad1",
+    "backend": "nvidia",
+    "port": 5000,
+    "entrypoint": "/opt/venv/bin/python3",
+    "args": [
+        "main.py",
+        "--config",
+        "/app/config.yml"
+    ],
+    "env": {
+        "NVIDIA_VISIBLE_DEVICES": "all"
+    },
+    "shm": "8g",
+    "weights": [
+        {
+            "repo": "turboderp/Muse-Glimmer-30B-exl3",
+            "revision": "a9de2279c516811bcbe544b53431d8017e41d304",
+            "at": "/workspace/models/Muse-Glimmer-30B-EXL3-SC4.00bpw-H5",
+            "layout": "dir"
+        },
+        {
+            "repo": "turboderp/Muse-Glimmer-30B-assistant-exl3",
+            "revision": "647b68159ff4e84ce211a629ba8b97eff8585d0a",
+            "at": "/workspace/draft/Muse-Glimmer-30B-assistant-EXL3-4.00bpw",
+            "layout": "dir"
+        }
+    ],
+    "config": {
+        "at": "/app/config.yml",
+        "text": "network:\n  host: 0.0.0.0\n  port: 5000\n  disable_auth: true\n  disable_fetch_requests: true\n  send_tracebacks: false\n  api_servers: [\"OAI\"]\n  sse_ping_interval: 15\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n  log_chat_completion_requests: false\n\nmodel:\n  model_dir: /workspace/models\n  inline_model_loading: false\n  use_dummy_models: false\n  model_name: Muse-Glimmer-30B-EXL3-SC4.00bpw-H5\n  backend: exllamav3\n  max_seq_len: 262144\n  cache_size: 263168\n  cache_mode: FP16\n  tensor_parallel: false\n  gpu_split_auto: true\n  autosplit_reserve: [512]\n  chunk_size: 2048\n  output_chunking: true\n  max_batch_size: 1\n  vision: true\n  vision_offload: true\n  tool_format: muse_glimmer\n\ndraft_model:\n  draft_mode: model\n  draft_model_dir: /workspace/draft\n  draft_model_name: Muse-Glimmer-30B-assistant-EXL3-4.00bpw\n  draft_cache_mode: Q8\n  draft_num_tokens: 5\n\nsampling:\n  override_preset:\n\nmemory:\n  sysmem_recurrent_cache: 4096\n  sysmem_kv_cache: 0\n  cuda_malloc_async: true\n"
+    },
+    "ctx": 262144,
+    "seqs": 1,
+    "vision": true,
+    "cards": 1
+}
